@@ -1,0 +1,23 @@
+language: python
+python:
+- '3.4'
+- '3.5'
+- '3.5-dev'
+- '3.6'
+- '3.6-dev'
+before_install:
+- sudo pip install pipenv
+install:
+- make devenv
+script: make check
+after_success:
+- bash <(curl -s https://codecov.io/bash)
+deploy:
+  provider: pypi
+  user: fridex
+  password:
+    secure: ftSdYb0TdJLHHSIfwuSSpQn4jluT6qcRVtThN72wjBXSP11ndm3GKJnl8i8AWom6XnWYfWDSC6fGlB5OFzpVrKNIcIBt0Np6RPOhE+zm9jgZhQR6HcjpAphVa18+UnTf+ulGjB9kqaqjknl8OSEJXK+XbKkI64NW0xB8RU4jdtenAteogxutnoS7FdJV+iXdh3dDKzW7YRRv2JNTTpbJSpzL3rzTSANXc76aYyedDDfOZ1CogYeygJHzYm9SWs0XZ5YIhMaXNYY95+afjKA5zt8/kfieQupSWKlZLdSYYO5+FWL8uIfLZhrUOAvdfsR7xLWP5kv6MVI//XhmIwPtdO0OmQXIKW7TKCl6AJfsvBMZkyBu3GAHxIFclcjt2YBpyQWG8z4cGLicZO0yg5mStsw+du3l4wu9Us0JX6GQg9udYpQbPf4dKOEvnPuyadSTv4Taw6wneqgfFoBAVZ+feXlIhfNgEWIiRDH2j5JUcs1ISIYVvoXQtle8rbC/MdsqQRs/gH8FRom4G9Zw+CgoBCUV4ffAL/dhL/yicu6B4gkqhV7PxCQfihfXy/UzR25uqR/MyGl+Ebt2t4dCijW2jRmMCLei/aRuVddHuuro/mHWGYZ93Qr51XEHutJZsjbu9Y4P24bRDonPQwwuPvAcXxeZwT+MINnp6KniUh1y8kc=
+  on:
+    tags: true
+    branch: master
+  distributions: sdist bdist_wheel

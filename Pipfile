@@ -1,0 +1,27 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[packages]
+
+attrs = "*"
+requests = "*"
+click = "*"
+daiquiri = "*"
+voluptuous = "*"
+pyyaml = "*"
+sphinx-rtd-theme = "*"
+"beautifulsoup4" = "*"
+
+
+[dev-packages]
+
+pytest = ">=3"
+pytest-timeout = "*"
+pytest-cov = "*"
+pydocstyle = "*"
+pylint = "*"
+flexmock = "*"
