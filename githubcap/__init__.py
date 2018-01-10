@@ -2,12 +2,6 @@
 
 from .configuration import Configuration
 from .configuration import ConfigurationDefaults
-from .enums import AuthorAssociation
-from .enums import Filtering
-from .enums import Sorting
-from .enums import SortingDirection
-from .enums import State
-from .enums import UserType
 from .token_management import Token
 from .token_management import TokenManagement
 from .utils import setup_logging

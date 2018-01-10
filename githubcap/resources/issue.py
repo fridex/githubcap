@@ -12,7 +12,7 @@ from githubcap.enums import AuthorAssociation
 from githubcap.enums import Filtering
 from githubcap.enums import Sorting
 from githubcap.enums import SortingDirection
-from githubcap.enums import State
+from githubcap.enums import IssueState
 from githubcap.schemas import ISSUE_SCHEMA
 from githubcap.utils import serialize_datetime
 
@@ -45,7 +45,7 @@ class Issue(GitHubBase):
     events_url = attr.ib(type=str)
     html_url = attr.ib(type=str)
     number = attr.ib(type=int)
-    state = attr.ib(type=State)
+    state = attr.ib(type=IssueState)
     title = attr.ib(type=str)
     body = attr.ib(type=str)
     user = attr.ib(type=User)
@@ -83,7 +83,7 @@ class IssueHandler(GitHubHandlerBase):
     milestone = attr.ib(type=int, default=None)
     labels = attr.ib(type=typing.List[Label], default=attr.Factory(list))
     assignees = attr.ib(type=typing.List[User], default=attr.Factory(list))
-    state = attr.ib(default=State.get_default(), type=State)
+    state = attr.ib(default=IssueState.get_default(), type=IssueState)
 
     @classmethod
     def by_number(cls, organization: str, project: str, number: int) -> Issue:
@@ -115,7 +115,7 @@ class IssuesHandler(GitHubHandlerBase):
     page = attr.ib(default=1, type=int)
     per_page = attr.ib(default=GitHubHandlerBase.DEFAULT_PER_PAGE, type=int)
     filter = attr.ib(default=Filtering.get_default(), type=Filtering)
-    state = attr.ib(default=State.get_default(), type=State)
+    state = attr.ib(default=IssueState.get_default(), type=IssueState)
     labels = attr.ib(default=attr.Factory(list), type=typing.List[Label])
     sort = attr.ib(default=Sorting.get_default(), type=Sorting)
     direction = attr.ib(default=SortingDirection.get_default(), type=SortingDirection)

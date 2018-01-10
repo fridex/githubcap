@@ -8,7 +8,7 @@ from voluptuous import Schema
 
 from githubcap.base import GitHubBase
 from githubcap.base import GitHubHandlerBase
-from githubcap.enums import State
+from githubcap.enums import MilestoneState
 from githubcap.schemas import MILESTONE_SCHEMA
 
 from .user import User
@@ -25,7 +25,7 @@ class Milestone(GitHubBase):
     labels_url = attr.ib(type=str)
     id = attr.ib(type=int)
     number = attr.ib(type=int)
-    state = attr.ib(type=State)
+    state = attr.ib(type=MilestoneState)
     title = attr.ib(type=str)
     description = attr.ib(type=str)
     creator = attr.ib(type=User)

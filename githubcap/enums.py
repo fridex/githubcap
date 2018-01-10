@@ -37,6 +37,47 @@ class GitHubCapEnum(Enum):
         return cls._value2member_map_[value]
 
 
+class GitTreeType(GitHubCapEnum):
+    """Type of git tree."""
+
+    BLOB = 'blob'
+
+
+class OrganizationState(GitHubCapEnum):
+    """State of an organization."""
+
+    ACTIVE = 'active'
+
+
+class AssetState(GitHubCapEnum):
+    """State of an asset."""
+
+    UPLOADED = 'uploaded'
+
+
+class ReleaseState(GitHubCapEnum):
+    """State of an asset."""
+
+    TBD = 'TBD'
+
+
+class OrganizationRole(GitHubCapEnum):
+    """Role of an organization."""
+
+    TBD = 'TBD'
+
+
+class ReviewState(GitHubCapEnum):
+    """State of a review."""
+
+    TBD = 'TBD'
+
+
+class ReactionType(GitHubCapEnum):
+    """State of a review."""
+
+    TBD = 'TBD'
+
 class Filtering(GitHubCapEnum):
     """Issue filtering."""
 
@@ -52,8 +93,8 @@ class Filtering(GitHubCapEnum):
         return cls.ALL
 
 
-class State(GitHubCapEnum):
-    """Resource state representation (e.g. for issues)."""
+class IssueState(GitHubCapEnum):
+    """Issue state representation."""
 
     OPEN = 'open'
     CLOSED = 'closed'
@@ -63,6 +104,29 @@ class State(GitHubCapEnum):
     def get_default(cls):
         """Get default enum value."""
         return cls.ALL
+
+
+class MilestoneState(GitHubCapEnum):
+    """Milestone state representation."""
+
+    OPEN = 'open'
+    CLOSED = 'closed'
+    ALL = 'all'
+
+    @classmethod
+    def get_default(cls):
+        """Get default enum value."""
+        return cls.ALL
+
+
+class AuthorizationScope(GitHubCapEnum):
+    PUBLIC_REPO = 'public_repo'
+    PRIVATE_REPO = 'private_repo'
+
+    @classmethod
+    def get_default(cls):
+        """Get default enum value."""
+        return cls.PUBLIC_REPO
 
 
 class Sorting(GitHubCapEnum):
