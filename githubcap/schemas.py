@@ -269,7 +269,7 @@ COMMIT_REF_SCHEMA = Schema({
 })
 
 
-COMMIT_PERSON_INFO = Schema({
+COMMIT_PERSON_INFO_SCHEMA = Schema({
     Required("date"): str,
     Required("email"): str,
     Required("name"): str,
@@ -277,8 +277,8 @@ COMMIT_PERSON_INFO = Schema({
 
 
 COMMIT_SCHEMA = Schema({
-    Required("author"): COMMIT_PERSON_INFO,
-    Required("committer"): COMMIT_PERSON_INFO,
+    Required("author"): COMMIT_PERSON_INFO_SCHEMA,
+    Required("committer"): COMMIT_PERSON_INFO_SCHEMA,
     Required("message"): str,
     Required("parents"): [COMMIT_REF_SCHEMA],
     Required("sha"): str,
@@ -295,7 +295,7 @@ GIT_OBJECT_SCHEMA = Schema({
 })
 
 
-SCHEMA = Schema({
+GIT_REF_SCHEMA = Schema({
     Required("ref"): str,
     Required("url"): Url(),
     Required("object"): GIT_OBJECT_SCHEMA,
@@ -454,7 +454,7 @@ ERROR_REPORT_SCHEMA = Schema({
 
 
 ERROR_TEAM_SCHEMA = Schema({
-    Required("errors"): [list],
+    Required("errors"): [object],
     Required("message"): str,
 })
 
@@ -684,7 +684,7 @@ RELEASE_SCHEMA = Schema({
 })
 
 
-SEARCH_RESULT  =  Schema({
+SEARCH_RESULT_SCHEMA = Schema({
     Required("fragment"): str,
     Required("matches"): [dict],
     Required("object_type"): str,
@@ -694,11 +694,11 @@ SEARCH_RESULT  =  Schema({
 
 
 SEARCH_RESULTS_SCHEMA = Schema({
-    Required("text_matches"): [SEARCH_RESULT],
+    Required("text_matches"): [SEARCH_RESULT_SCHEMA],
 })
 
 
-GPG_KEYS_SCHEMA = Schema({
+GPG_KEY_SCHEMA = Schema({
     Required("id"): int,
     Required("primary_key_id"): Schema(Any(str, None)),
     Required("key_id"): str,

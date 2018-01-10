@@ -58,19 +58,19 @@ class AssetState(GitHubCapEnum):
 class ReleaseState(GitHubCapEnum):
     """State of an asset."""
 
-    TBD = 'TBD'
+    UPLOADED = 'uploaded'
 
 
 class OrganizationRole(GitHubCapEnum):
     """Role of an organization."""
 
-    TBD = 'TBD'
+    ACTIVE = 'active'
 
 
 class ReviewState(GitHubCapEnum):
     """State of a review."""
 
-    TBD = 'TBD'
+    DISMISSED = 'DISMISSED'
 
 
 class ReactionType(GitHubCapEnum):
