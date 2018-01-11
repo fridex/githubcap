@@ -47,8 +47,47 @@ class User(GitHubBase):
     public_repos = attr.ib(type=int, default=None)
     updated_at = attr.ib(type=datetime, default=None)
 
+    @classmethod
+    def unblock_user_by_name(cls, username: str):
+        cls._call('/user/blocks/{username}'.format(username=username), method='DELETE')
+
+    @classmethod
+    def remove_emails(cls, emails: typing.List[str]):
+        cls._call('/user/emails',payload=emails,  method='DELETE')
+
+    @classmethod
+    def get_public_emails(cls) -> typing.List[str]:
+        response = cls._call('/user/public_emails', method='GET')
+        return response
+
+    @classmethod
+    def update(cls, name: str = None, email: str = None, blog: str = None, company: str = None,
+               location: str = None, hireable: bool = None, bio: str = None):
+        payload = {}
+
+        if name is not None:
+            payload['name'] = name
+        if email is not None:
+            payload['email'] = email
+        if blog is not None:
+            payload['blog'] = blog
+        if company is not None:
+            payload['company'] = company
+        if location is not None:
+            payload['location'] = location
+        if hireable is not None:
+            payload['hireable'] = hireable
+        if bio is not None:
+            payload['bio'] = bio
+
+        response = cls._call('/user', payload=payload, method='PATCH')
+        return cls.from_response(response)
+
     def remove_from_organization(self, org: str):
-        """"In order to remove a user's membership with an organization, the authenticated user must be an organization owner."""
+        """"In order to remove a user's membership with an organization.
+
+        The authenticated user must be an organization owner.
+        """
         Organization.remove_user_from_organization(org, self.login)
 
     @classmethod
@@ -92,16 +131,21 @@ class Organization(GitHubBase):
     @classmethod
     def get_by_name(cls, org: str):
         response = cls._call('/orgs/{org}'.format(org=org), method='PATCH')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
     @classmethod
     def remove_user_from_organization(cls, org: str, username: str):
-        """"In order to remove a user's membership with an organization, the authenticated user must be an organization owner."""
-        response = cls._call('/orgs/{org}/memberships/{username}'.format(org=org, username=username), method='DELETE')
+        """"In order to remove a user's membership with an organization.
 
-    @classmethod
-    def remove_user(cls, org: str, username: str):
-        """"In order to remove a user's membership with an organization, the authenticated user must be an organization owner."""
+        The authenticated user must be an organization owner.
+        """
+        cls._call('/orgs/{org}/memberships/{username}'.format(org=org, username=username), method='DELETE')
+
+    def remove_user(self, username: str):
+        """"In order to remove a user's membership with an organization.
+
+        The authenticated user must be an organization owner.
+        """
         self.remove_user_from_organization(self.login, username)
 
     @classmethod
@@ -114,22 +158,28 @@ class Organization(GitHubBase):
 
     @classmethod
     def create_repository_in_organization(cls, org: str, repository: Repository) -> Repository:
-        """"Create a new repository in a organization. The authenticated user must be a member of the specified organization."""
+        """"Create a new repository in a organization.
+
+        The authenticated user must be a member of the specified organization.
+        """
         response = cls._call('/orgs/{org}/repos'.format(org=org), payload=Repository.as_dict(), method='POST')
-        return Repository.from_response(result)
+        return Repository.from_response(response)
 
     def create_repository(self, repository: Repository) -> Repository:
-        """"Create a new repository in this organization. The authenticated user must be a member of the specified organization."""
-        return self.create_repository_in_organization(self.login, Repository)
+        """"Create a new repository in this organization.
+
+        The authenticated user must be a member of the specified organization.
+        """
+        return self.create_repository_in_organization(self.login, repository)
 
     @classmethod
     def create_team_in_organization(cls, org: str, team: Team):
         """"To create a team, the authenticated user must be a member of org."""
         return Team.create_in_organization(org, team)
 
-    def create_team(self, org: str, team: Team):
+    def create_team(self, team: Team):
         """"To create a team, the authenticated user must be a member of org."""
-        return Team.create_in_organization(org, team)
+        return Team.create_in_organization(self.login, team)
 
 
 @attr.s
@@ -146,7 +196,7 @@ class License(GitHubBase):
     @classmethod
     def get_by_name(cls, license: str):
         response = cls._call('/licenses/{license}'.format(license=license), method='GET')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
 
 @attr.s
@@ -237,7 +287,7 @@ class Repository(GitHubBase):
 
     def create_in_organization(self, org) -> Repository:
         """"Create a new repository in an organization. The authenticated user must be a member of the specified organization."""
-        return Organization.create_repository_in_organization(org, Repository)
+        return Organization.create_repository_in_organization(org, self)
 
     @classmethod
     def delete_repository(cls, owner: str, repo: str):
@@ -247,6 +297,113 @@ class Repository(GitHubBase):
     def detele(self):
         owner, name  = self.full_name.split('/')
         self.delete_repository(owner, name)
+
+    @classmethod
+    def check_assignee_by_name(cls, owner: str, repo: str, assignee: str):
+        """Checks if a user has permission to be assigned to an issue in this repository."""
+        cls._call("repos/{owner}/{repo}/assignees/{assignee}".format(owner=owner, repo=repo, assignee=assignee))
+
+    def check_assignee(self, assignee: str):
+        """Checks if a user has permission to be assigned to an issue in this repository."""
+        owner, name  = self.full_name.split('/')
+        return self.check_assignee_by_name(owner, name, assignee)
+
+    @classmethod
+    def remove_collaborator_by_name(cls, owner: str, repo: str, username: str):
+        response = cls._call('/repos/{owner}/{repo}/collaborators/{username}'.format(owner=owner, username=username, repo=repo), method='DELETE')
+        return cls.from_response(response)
+
+    def remove_collaborator(self, username: str):
+        owner, name  = self.full_name.split('/')
+        return self.remove_collaborator_by_name(owner, name, username)
+
+
+    def get_code_of_conduct(self):
+        owner, name  = self.full_name.split('/')
+        return CodeOfConduct.get_for_repo(owner, name)
+
+    @classmethod
+    def delete_file_by_path(cls, owner: str, repo: str, path: str):
+        """"This method deletes a file in a repositor."""
+        cls._call('/repos/{owner}/{repo}/contents/{path}'.format(owner=owner, path=path, repo=repo), method='DELETE')
+
+    def delete_file(self, path: str):
+        owner, repo = self.full_name.split('/')
+        return self.delete_file_by_path(owner, repo, path)
+
+    @classmethod
+    def fork_by_name(cls, owner: str, repo: str):
+        """"Create a fork for the authenticated user."""
+        response = cls._call('/repos/{owner}/{repo}/forks'.format(owner=owner, repo=repo), method='POST')
+        return cls.from_response(response)
+
+    def fork(self, owner: str, repo: str):
+        """"Create a fork for the authenticated user."""
+        owner, name  = self.full_name.split('/')
+        return self.fork_by_name(owner, name)
+
+    def get_commit(self, sha: str):
+        owner, name  = self.full_name.split('/')
+        return Commit.get_by_repo(owner, name, sha)
+
+    @classmethod
+    def create_issue_in_repo(cls, owner: str, repo: str, issue: Issue):
+        """"Any user with pull access to a repository can create an issue."""
+        response = cls._call('/repos/{owner}/{repo}/issues'.format(owner=owner, repo=repo), payload=Issue.to_dict(), method='POST')
+        return Issue.from_response(response)
+
+    def create_issue(self, issue: Issue):
+        """"Any user with pull access to a repository can create an issue."""
+        owner, repo = self.full_name.split('/')
+        return self.create_issue_in_repo(owner, repo, issue)
+
+    @classmethod
+    def get_license_by_name(cls, owner: str, repo: str):
+        """"This method returns the contents of the repository's license file, if one is detected."""
+        response = cls._call('/repos/{owner}/{repo}/license'.format(owner=owner, repo=repo), method='GET')
+        return License.from_response(response)
+
+    def get_license(self):
+        owner, name  = self.full_name.split('/')
+        return self.get_license_by_name(owner, name)
+
+    @classmethod
+    def remove_milestone_by_name(cls, owner: str, repo: str,  number: int):
+        cls._call('/repos/{owner}/{repo}/milestones/{number}'.format(number=number, owner=owner, repo=repo), method='DELETE')
+
+    def remove_milestone(self, number: int):
+        owner, name  = self.full_name.split('/')
+        return self.remove_milestone_by_name(owner, repo, name)
+
+    @classmethod
+    def get_readme_by_name(cls, owner: str, repo: str):
+        """"This method returns the preferred README for a repository."""
+        response = cls._call('/repos/{owner}/{repo}/readme'.format(owner=owner, repo=repo), method='GET')
+        return response
+    
+    def get_readme(self):
+        owner, repo  = self.full_name.split('/')
+        return self.get_readme_by_name(owner, repo)
+
+    @classmethod
+    def get_release_by_tag(cls, owner: str, repo: str, tag: str):
+        """"Get a published release with the specified tag."""
+        response = cls._call('/repos/{owner}/{repo}/releases/tags/{tag}'.format(owner=owner, tag=tag, repo=repo), method='GET')
+        return Release.from_response(response)
+
+    def get_release(self, tag: str):
+        owner, repo  = self.full_name.split('/')
+        return self.get_release_by_tag(owner, repo, tag)
+
+    @classmethod
+    def delete_release_by_id(cls, owner: str, repo: str, id: int):
+        """"Users with push access to the repository can delete a release."""
+        response = cls._call('/repos/{owner}/{repo}/releases/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+        return cls.from_response(response)
+
+    def delete_release(self, id: int):
+        owner, repo  = self.full_name.split('/')
+        self.delete_release_by_id(owner, repo, id)
 
 
 @attr.s
@@ -262,7 +419,7 @@ class App(GitHubBase):
     @classmethod
     def get(cls):
         """"Returns the GitHub App associated with the authentication credentials used."""
-        response = cls._call('/app'), method='GET')
+        response = cls._call('/app', method='GET')
         return cls.from_response(response)
 
     @classmethod
@@ -380,7 +537,7 @@ class Gist(GitHubBase):
 
     @classmethod
     def delete_by_id(cls, id: int):
-        response = cls._call('/authorizations/{id}'.format(id=id), method='DELETE')
+        cls._call('/authorizations/{id}'.format(id=id), method='DELETE')
 
     def delete(self):
         self.delete_by_id(self.id)
@@ -388,7 +545,7 @@ class Gist(GitHubBase):
     @classmethod
     def get_by_id(cls, id: int):
         response = cls._call('/gists/{id}'.format(id=id), method='DELETE')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
     @classmethod
     def is_starred_by_id(cls, id: int):
@@ -396,16 +553,16 @@ class Gist(GitHubBase):
         # TODO: 204 is starred
         # TODO: 404 not starred
 
-    @classmethod
-    def is_starred(cls, id: int):
-        response = cls._call('/gists/{id}/star'.format(id=self.id), method='GET')
+    def is_starred(self):
+        response = self._call('/gists/{id}/star'.format(id=self.id), method='GET')
         # TODO: 204 is starred
         # TODO: 404 not starred
 
     @classmethod
     def get_by_revision(cls, sha: str, id: int):
         response = cls._call('/gists/{id}/{sha}'.format(sha=sha, id=id), method='GET')
-        return cls.from_response(result)
+        return cls.from_response(response)
+
 
 @attr.s
 class GistComment(GitHubBase):
@@ -424,7 +581,6 @@ class GistComment(GitHubBase):
     def get_by_id(cls, id: int, gist_id: int):
         response = cls._call('/gists/{gist_id}/comments/{id}'.format(id=id, gist_id=gist_id), method='DELETE')
         return cls.from_response(response)
-
 
 
 @attr.s
@@ -462,6 +618,11 @@ class Commit(GitHubBase):
     tree = attr.ib(type=CommitRef)
     url = attr.ib(type=str)
     verification = attr.ib(type=dict)
+
+    @classmethod
+    def get_by_repo(cls, owner: str, repo: str, sha: str):
+        response = cls._call('/repos/{owner}/{repo}/git/commits/{sha}'.format(sha=sha, owner=owner, repo=repo), method='GET')
+        return cls.from_response(response)
 
 
 @attr.s
@@ -539,6 +700,11 @@ class GitTree(GitHubBase):
     truncated = attr.ib(type=bool)
     url = attr.ib(type=str)
 
+    @classmethod
+    def get_by_sha(cls, owner: str, repo: str, sha: str):
+        response = cls._call('/repos/{owner}/{repo}/git/trees/{sha}'.format(sha=sha, owner=owner, repo=repo), method='GET')
+        return cls.from_response(response)
+
 
 @attr.s
 class GithubApp(GitHubBase):
@@ -580,6 +746,11 @@ class IssueComment(GitHubBase):
     url = attr.ib(type=str)
     user = attr.ib(type=User)
 
+    def edit_issue(self, number: int, owner: str, repo: str):
+        """"Issue owners and users with push access can edit an issue."""
+        response = self._call('/repos/{owner}/{repo}/issues/{number}'.format(number=number, owner=owner, repo=repo), payload=self.to_dict(), method='PATCH')
+        return self.from_response(response)
+
 
 @attr.s
 class Label(GitHubBase):
@@ -592,6 +763,7 @@ class Label(GitHubBase):
     id = attr.ib(type=int)
     name = attr.ib(type=str)
     url = attr.ib(type=str)
+
 
 
 @attr.s
@@ -637,7 +809,7 @@ class Migration(GitHubBase):
     def fetch_status(cls, org: str, id: int):
         """"Fetches the status of a migration."""
         response = cls._call('/orgs/{org}/migrations/{id}'.format(org=org, id=id), method='GET')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
     @classmethod
     def delete_migration_archive(cls, org: str, id: int):
@@ -648,10 +820,7 @@ class Migration(GitHubBase):
     def unlock_repository(cls, org: str, id: int, repo_name: str):
         """"Unlocks a repository that was locked for migration. You should unlock each migrated repository and delete them when the migration is complete and you no longer need the source data."""
         response = cls._call('/orgs/{org}/migrations/{id}/repos/{repo_name}/lock'.format(org=org, id=id, repo_name=repo_name), method='DELETE')
-        return cls.from_response(result)
-
-
-
+        return cls.from_response(response)
 
 
 @attr.s
@@ -676,6 +845,11 @@ class SourceImport(GitHubBase):
     vcs = attr.ib(type=str)
     vcs_url = attr.ib(type=str)
 
+    @classmethod
+    def stop_import(cls, owner: str, repo: str):
+        """"Stop an import for a repository."""
+        cls._call('/repos/{owner}/{repo}/import'.format(owner=owner, repo=repo), method='DELETE')
+
 
 @attr.s
 class CodeOfConduct(GitHubBase):
@@ -697,6 +871,13 @@ class CodeOfConduct(GitHubBase):
     def get_by_key(cls, key: str):
         response = cls._call('/codes_of_conduct/{key}'.format(key=key), method='GET')
         return cls.from_response(response)
+
+    @classmethod
+    def get_for_repo(cls, owner: str, repo: str):
+        """"This method returns the contents of the repository's code of conduct file, if one is detected."""
+        response = cls._call('/repos/{owner}/{repo}/community/code_of_conduct'.format(owner=owner, repo=repo), method='GET')
+        return cls.from_response(response)
+
 
 
 @attr.s
@@ -755,13 +936,13 @@ class Hook(GitHubBase):
     @classmethod
     def get_by_id(cls, org: str, id: int):
         response = cls._call('/orgs/{org}/hooks/{id}'.format(org=org, id=id), method='DELETE')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
     @classmethod
     def ping_hook(cls, org: str, id: int):
         """"This will trigger a ping event to be sent to the hook."""
         response = cls._call('/orgs/{org}/hooks/{id}/pings'.format(org=org, id=id), method='POST')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
 
 @attr.s
@@ -781,7 +962,7 @@ class ProjectCard(GitHubBase):
 
     @classmethod
     def delete_by_id(cls, card_id: int):
-        response = cls._call('/projects/columns/cards/{card_id}'.format(card_id=card_id), method='DELETE')
+        cls._call('/projects/columns/cards/{card_id}'.format(card_id=card_id), method='DELETE')
 
     def delete(self):
         self.delete_by_id(self.id)
@@ -817,7 +998,7 @@ class ProjectColumn(GitHubBase):
     @classmethod
     def delete_by_id(cls, column_id: int):
         response = cls._call('/projects/columns/{column_id}'.format(column_id=column_id), method='DELETE')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
     def delete(self):
         return self.delete_by_id(self.id)
@@ -825,10 +1006,10 @@ class ProjectColumn(GitHubBase):
     @classmethod
     def move_by_id(cls, column_id: int, position: int):
         response = cls._call('/projects/columns/{column_id}/moves'.format(column_id=column_id), payload={'position': position}, method='POST')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
     def move(self, position: int):
-        return self.move_by_id(self, id, position)
+        return self.move_by_id(self.id, position)
 
 
 @attr.s
@@ -843,7 +1024,6 @@ class Project(GitHubBase):
         return self.delete_by_id(self.id)
 
 
-
 @attr.s
 class Branch(GitHubBase):
     """Git branch info."""
@@ -855,6 +1035,16 @@ class Branch(GitHubBase):
     repo = attr.ib(type=Repository)
     sha = attr.ib(type=str)
     user = attr.ib(type=User)
+
+    @classmethod
+    def get_branch_by_name(cls, branch: str, owner: str, repo: str):
+        response = cls._call('/repos/{owner}/{repo}/branches/{branch}'.format(branch=branch, owner=owner, repo=repo), method='GET')
+        return cls.from_response(response)
+
+    @classmethod
+    def remove_protection_by_name(cls, branch: str, owner: str, repo: str):
+        response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+        # TODO: BranchProtection class
 
 
 @attr.s
@@ -931,6 +1121,10 @@ class PullRequestComment(GitHubBase):
     url = attr.ib(type=str)
     user = attr.ib(type=User)
 
+    @classmethod
+    def remove_by_id(cls, owner: str, repo: str, id: int):
+        cls._call('/repos/{owner}/{repo}/pulls/comments/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+    
 
 @attr.s
 class CommentReaction(GitHubBase):
@@ -946,12 +1140,10 @@ class CommentReaction(GitHubBase):
     @classmethod
     def delete_by_id(cls, id: int):
         response = cls._call('/reactions/{id}'.format(id=id), method='DELETE')
-        return cls.from_response(result)
+        return cls.from_response(response)
 
-    @classmethod
     def delete(self):
         return self.delete_by_id(self.id)
-
 
 
 @attr.s
@@ -980,6 +1172,11 @@ class CommitComment(GitHubBase):
     updated_at = attr.ib(type=datetime)
     url = attr.ib(type=str)
     user = attr.ib(type=User)
+
+    @classmethod
+    def delete_by_id(cls, owner: str, id: int, repo: str):
+        response = cls._call('/repos/{owner}/{repo}/comments/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+        return cls.from_response(response)
 
 
 @attr.s
@@ -1168,6 +1365,31 @@ class Issue(GitHubBase):
     pull_request = attr.ib(type=dict, default=None)
     repository = attr.ib(type=Repository, default=None)
 
+    @classmethod
+    def remove_assignees_by_id(cls, owner: str, repo: str, number: int, assignees: typing.List[str]):
+        """"Removes one or more assignees from an issue."""
+        response = cls._call('/repos/{owner}/{repo}/issues/{number}/assignees'.format(number=number, owner=owner, repo=repo), payload={'assignees': assignees}, method='DELETE')
+        return cls.from_response(response)
+
+    def remove_assignees(self, assignees: typing.List[str]):
+        owner, repo = self.repository.full_name.split('/')
+        self.remove_assignees_by_id(owner, repo, self.number, assignees)
+
+    @classmethod
+    def remove_label_by_name(cls, owner: str, repo: str, number: int, name: str):
+        response = cls._call('/repos/{owner}/{repo}/issues/{number}/labels/{name}'.format(number=number, owner=owner, name=name, repo=repo), method='DELETE')
+        return cls.from_response(response)
+
+    def remove_label(self, name: str):
+        owner, repo = self.repository.full_name.split('/')
+        self.remove_label_by_name(owner, repo, self.number, name)
+
+    @classmethod
+    def unlock_conversation(cls, owner: str, repo: str, number: int):
+        """"Users with push access can unlock an issue's conversation."""
+        cls._call('/repos/{owner}/{repo}/issues/{number}/lock'.format(number=number, owner=owner, repo=repo), method='DELETE')
+
+
 class Team(GitHubBase):
     # TODO: add schema
     # https://developer.github.com/v3/orgs/teams/#create-team
@@ -1178,8 +1400,8 @@ class Team(GitHubBase):
     url = attr.ib(type=str, default=None)
     slug = attr.ib(type=str, default=None)
     description = attr.ib(type=str, default=None)
-    privacy = attr.ib(type=TeamPrivacy, default=None)
-    permission = attr.ib(type=TeamPermission, default=None)
+    privacy = attr.ib(type=enums.TeamPrivacy, default=None)
+    permission = attr.ib(type=enums.TeamPermission, default=None)
     members_url = attr.ib(type=str, default=None)
     repositories_url = attr.ib(type=url, default=None)
 
@@ -1193,8 +1415,16 @@ class Team(GitHubBase):
     @classmethod
     def create_in_organization(cls, org: str, team: Team):
         """"To create a team, the authenticated user must be a member of org."""
-        response = cls._call('/orgs/{org}/teams'.format(org=org), method='POST')
-        return cls.from_response(result)
+        response = cls._call('/orgs/{org}/teams'.format(org=org), payload=team.to_dict(), method='POST')
+        return cls.from_response(response)
+
+    @classmethod
+    def delete_team_by_id(cls, id: int):
+        """"If you are an organization owner and you pass the hellcat-preview media type, deleting a parent team will delete all of its child teams as well."""
+        cls._call('/teams/{id}'.format(id=id), method='DELETE')
+
+    def delete(self):
+        self.delete_team_by_id(self.id)
 
 
 @attr.s
@@ -1215,7 +1445,8 @@ class Markdown(GitHubBase):
 
 @attr.s
 class RateLimit(GitHubBase):
-    # TODO: attributes?
+    def __init__(self):
+        raise NotImplementedError
 
     @classmethod
     def get(cls):
@@ -1223,5 +1454,1019 @@ class RateLimit(GitHubBase):
         response = cls._call('/rate_limit', method='GET')
         return response
 
-
-
+#
+# Missing API calls:
+#
+# @classmethod
+# def func_75(cls, branch: str, owner: str, repo: str):
+#     """"Removing admin enforcement requires admin access and branch protection to be enabled."""
+#     response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+#     return cls.from_response(response)
+#
+# @classmethod
+# def func_76(cls, branch: str, owner: str, repo: str):
+#     response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+#     return cls.from_response(response)
+# 
+# @classmethod
+# def func_77(cls, branch: str, owner: str, repo: str):
+#     response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+#     return cls.from_response(response)
+# 
+# @classmethod
+# def func_78(cls, branch: str, owner: str, repo: str):
+#     response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+#     return cls.from_response(response)
+# 
+# @classmethod
+# def func_79(cls, branch: str, owner: str, repo: str):
+#     response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection/restrictions'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+#     return cls.from_response(response)
+# 
+# @classmethod
+# def func_80(cls, branch: str, owner: str, repo: str):
+#     response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+#     return cls.from_response(response)
+# 
+# @classmethod
+# def func_81(cls, branch: str, owner: str, repo: str):
+#     response = cls._call('/repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users'.format(branch=branch, owner=owner, repo=repo), method='DELETE')
+#     return cls.from_response(response)
+# 
+#
+#@classmethod
+#def func_2(cls, ):
+#    response = cls._call('/app/installations', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_3(cls, installation_id: int):
+#    response = cls._call('/app/installations/{installation_id}'.format(installation_id=installation_id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_5(cls, ):
+#    """"You can use this API to list the set of OAuth applications that have been granted access to your account. Unlike the list your authorizations API, this API does not manage individual tokens. This API will return one entry for each OAuth application that has been granted access to your account, regardless of the number of tokens an application has generated for your user. The list of OAuth applications returned matches what is shown on the application authorizations settings screen within GitHub. The scopes returned are the union of scopes authorized for the application. For example, if an application has one token with repo scope and another token with user scope, the grant will return ["repo", "user"]."""
+#    response = cls._call('/applications/grants', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_5(cls, id: int):
+#    """"Deleting an OAuth application's grant will also delete all OAuth tokens associated with the application for your user. Once deleted, the application has no access to your account and is no longer listed on the application authorizations settings screen within GitHub."""
+#    response = cls._call('/applications/grants/{id}'.format(id=id), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_6(cls, client_id: int, access_token: str):
+#    """"Deleting an OAuth application's grant will also delete all OAuth tokens associated with the application for the user. Once deleted, the application will have no access to the user's account and will no longer be listed on the application authorizations settings screen within GitHub."""
+#    response = cls._call('/applications/{client_id}/grants/{access_token}'.format(client_id=client_id, access_token=access_token), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_7(cls, client_id: int, access_token: str):
+#    """"OAuth application owners can revoke a single token for an OAuth application. You must use Basic Authentication for this method, where the username is the OAuth application client_id and   the password is its client_secret."""
+#    response = cls._call('/applications/{client_id}/tokens/{access_token}'.format(client_id=client_id, access_token=access_token), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_9(cls, ):
+#    """"Organizations that enforce SAML SSO require personal access tokens to be whitelisted. Read more about whitelisting tokens on the GitHub Help site."""
+#    response = cls._call('/authorizations', method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_10(cls, client_id: int):
+#    """"This method will create a new authorization for the specified OAuth application, only if an authorization for that application doesn't already exist for the user. The URL includes the 20 character client ID for the OAuth app that is requesting the token. It returns the user's existing authorization for the application if one is present. Otherwise, it creates and returns a new one."""
+#    response = cls._call('/authorizations/clients/{client_id}'.format(client_id=client_id), method='PUT')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_11(cls, fingerprint: str, client_id: int):
+#    """"This method will create a new authorization for the specified OAuth application, only if an authorization for that application and fingerprint do not already exist for the user. The URL includes the 20 character client ID for the OAuth app that is requesting the token. fingerprint is a unique string to distinguish an authorization from others created for the same client ID and user. It returns the user's existing authorization for the application if one is present. Otherwise, it creates and returns a new one."""
+#    response = cls._call('/authorizations/clients/{client_id}/{fingerprint}'.format(fingerprint=fingerprint, client_id=client_id), method='PUT')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_15(cls, ):
+#    response = cls._call('/gists', method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_16(cls, ):
+#    """"Note: With pagination, you can fetch up to 3000 gists. For example, you can fetch 100 pages with 30 gists per page or 30 pages with 100 gists per page."""
+#    response = cls._call('/gists/public', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_17(cls, ):
+#    """"List the authenticated user's starred gists."""
+#    response = cls._call('/gists/starred', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_18(cls, gist_id: int):
+#    response = cls._call('/gists/{gist_id}/comments'.format(gist_id=gist_id), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_21(cls, id: int):
+#    response = cls._call('/gists/{id}/commits'.format(id=id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_22(cls, id: int):
+#    response = cls._call('/gists/{id}/forks'.format(id=id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_25(cls, ):
+#    """"List all templates available to pass as an option when creating a repository."""
+#    response = cls._call('/gitignore/templates', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_26(cls, ):
+#    """"The API also allows fetching the source of a single template."""
+#    response = cls._call('/gitignore/templates/c', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_27(cls, ):
+#    """"List repositories that are accessible to the authenticated installation."""
+#    response = cls._call('/installation/repositories', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_28(cls, installation_id: int):
+#    response = cls._call('/installations/{installation_id}/access_tokens'.format(installation_id=installation_id), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_29(cls, ):
+#    """"List all issues assigned to the authenticated user across all visible repositories including owned repositories, member repositories, and organization repositories."""
+#    response = cls._call('/issues', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_30(cls, ):
+#    response = cls._call('/licenses', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_34(cls, ):
+#    """"Note: Pagination is powered exclusively by the since parameter. Use the Link header to get the URL for the next page of organizations."""
+#    response = cls._call('/organizations', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_36(cls, org: str):
+#    """"List the users blocked by an organization."""
+#    response = cls._call('/orgs/{org}/blocks'.format(org=org), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_37(cls, org: str, username: str):
+#    response = cls._call('/orgs/{org}/blocks/{username}'.format(org=org, username=username), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_38(cls, org: str):
+#    response = cls._call('/orgs/{org}/hooks'.format(org=org), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_41(cls, org: str):
+#    """"The return hash contains a role field which refers to the Organization Invitation role and will be one of the following values: direct_member, admin, billing_manager,  hiring_manager, or reinstate. If the invitee is not a GitHub member, the login field in the return hash will be null."""
+#    response = cls._call('/orgs/{org}/invitations'.format(org=org), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_42(cls, org: str):
+#    """"List all issues for a given organization assigned to the authenticated user."""
+#    response = cls._call('/orgs/{org}/issues'.format(org=org), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_43(cls, org: str):
+#    """"List all users who are members of an organization. If the authenticated user is also a member of this organization then both concealed and public members will be returned."""
+#    response = cls._call('/orgs/{org}/members'.format(org=org), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_44(cls, org: str, username: str):
+#    """"Removing a user from this list will remove them from all teams and they will no longer have any access to the organization's repositories."""
+#    response = cls._call('/orgs/{org}/members/{username}'.format(org=org, username=username), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_46(cls, org: str):
+#    """"Lists the most recent migrations."""
+#    response = cls._call('/orgs/{org}/migrations'.format(org=org), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_50(cls, org: str):
+#    """"List all users who are outside collaborators of an organization."""
+#    response = cls._call('/orgs/{org}/outside_collaborators'.format(org=org), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_51(cls, org: str, username: str):
+#    """"When an organization member is converted to an outside collaborator, they'll only have access to the repositories that their current team membership allows. The user will no longer be a member of the organization. For more information, see "Converting an organization member to an outside collaborator"."""
+#    response = cls._call('/orgs/{org}/outside_collaborators/{username}'.format(org=org, username=username), method='PUT')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_52(cls, org: str):
+#    response = cls._call('/orgs/{org}/projects'.format(org=org), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_53(cls, org: str):
+#    """"Members of an organization can choose to have their membership publicized or not."""
+#    response = cls._call('/orgs/{org}/public_members'.format(org=org), method='GET')
+#    return cls.from_response(response)
+#
+#
+#@classmethod
+#def func_60(cls, column_id: int):
+#    response = cls._call('/projects/columns/{column_id}/cards'.format(column_id=column_id), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_63(cls, project_id: int):
+#    response = cls._call('/projects/{project_id}/columns'.format(project_id=project_id), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_68(cls, owner: str, name: str):
+#    response = cls._call('/repos/{owner}/{name}/community/profile'.format(owner=owner, name=name), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_70(cls, owner: str, repo: str):
+#    """"Lists the available assignees for issues in a repository."""
+#    response = cls._call('/repos/{owner}/{repo}/assignees'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_72(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/branches'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_82(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/collaborators'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_84(cls, owner: str, username: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/collaborators/{username}/permission'.format(owner=owner, username=username, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_85(cls, owner: str, repo: str):
+#    """"Comments are ordered by ascending ID."""
+#    response = cls._call('/repos/{owner}/{repo}/comments'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_87(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/comments/{id}/reactions'.format(owner=owner, id=id, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_88(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/commits'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_89(cls, ref: str, owner: str, repo: str):
+#    """"Users with read access can get the SHA-1 of a commit reference."""
+#    response = cls._call('/repos/{owner}/{repo}/commits/{ref}'.format(ref=ref, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_90(cls, ref: str, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/commits/{ref}/comments'.format(ref=ref, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_91(cls, ref: str, owner: str, repo: str):
+#    """"Users with pull access can access a combined view of commit statuses for a given ref."""
+#    response = cls._call('/repos/{owner}/{repo}/commits/{ref}/status'.format(ref=ref, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_92(cls, ref: str, owner: str, repo: str):
+#    """"Users with pull access can view commit statuses for a given ref."""
+#    response = cls._call('/repos/{owner}/{repo}/commits/{ref}/statuses'.format(ref=ref, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_93(cls, sha: str, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/commits/{sha}'.format(sha=sha, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_94(cls, sha: str, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/commits/{sha}/comments'.format(sha=sha, owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_96(cls, branchname: str, owner: str, repo: str):
+#    """"Both :base and :head must be branch names in :repo. To compare branches across other repositories in the same network as :repo, use the format <USERNAME>:branch. For example."""
+#    response = cls._call('/repos/{owner}/{repo}/compare/hubot{branchname}...octocat{branchname}'.format(branchname=branchname, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_97(cls, head: str, owner: str, base: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/compare/{base}...{head}'.format(head=head, owner=owner, base=base, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_99(cls, owner: str, repo: str):
+#    """"Lists contributors to the specified repository and sorts them by the number of commits per contributor in descending order. This endpoint may return information that is a few hours old because the GitHub REST API v3 caches contributor data to improve performance."""
+#    response = cls._call('/repos/{owner}/{repo}/contributors'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_100(cls, owner: str, repo: str):
+#    """"Users with repo or repo_deployment scopes can create a deployment for a given ref."""
+#    response = cls._call('/repos/{owner}/{repo}/deployments'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_101(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/deployments/{id}'.format(owner=owner, id=id, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_102(cls, owner: str, id: int, repo: str):
+#    """"Users with push access can create deployment statuses for a given deployment."""
+#    response = cls._call('/repos/{owner}/{repo}/deployments/{id}/statuses'.format(owner=owner, id=id, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_103(cls, owner: str, status_id: int, id: int, repo: str):
+#    """"Users with pull access can view a deployment status for a deployment."""
+#    response = cls._call('/repos/{owner}/{repo}/deployments/{id}/statuses/{status_id}'.format(owner=owner, status_id=status_id, id=id, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_104(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/downloads'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_105(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/downloads/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_107(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/git/blobs'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_108(cls, sha: str, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/git/blobs/{sha}'.format(sha=sha, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_109(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/git/commits'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_111(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/git/refs'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_112(cls, owner: str, repo: str):
+#    """"If the ref doesn't exist in the repository, but existing refs start with ref they will be returned as an array. For example, a call to get the data for a branch named feature, which doesn't exist, would return head refs including featureA and featureB which do."""
+#    response = cls._call('/repos/{owner}/{repo}/git/refs/heads/feature'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_114(cls, owner: str, repo: str):
+#    """"The ref in the URL must be formatted as heads/branch, not just branch. For example, the call to get the data for a branch named skunkworkz/featureA would be."""
+#    response = cls._call('/repos/{owner}/{repo}/git/refs/heads/skunkworkz/featurea'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_115(cls, owner: str, repo: str):
+#    """"You can also request a sub-namespace. For example, to get all the tag references, you can call."""
+#    response = cls._call('/repos/{owner}/{repo}/git/refs/tags'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_116(cls, ref: str, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/git/refs/{ref}'.format(ref=ref, owner=owner, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_117(cls, owner: str, repo: str):
+#    """"Note that creating a tag object does not create the reference that makes a tag in Git.  If you want to create an annotated tag in Git, you have to do this call to create the tag object, and then create the refs/tags/[tag] reference. If you want to create a lightweight tag, you only have to create the tag reference - this call would be unnecessary."""
+#    response = cls._call('/repos/{owner}/{repo}/git/tags'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_118(cls, sha: str, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/git/tags/{sha}'.format(sha=sha, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_119(cls, owner: str, repo: str):
+#    """"The tree creation API will take nested entries as well. If both a tree and a nested path modifying that tree are specified, it will overwrite the contents of that tree with the new path contents and write a new tree out."""
+#    response = cls._call('/repos/{owner}/{repo}/git/trees'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_121(cls, sha: str, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/git/trees/{sha}?recursive=1'.format(sha=sha, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_122(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/hooks'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_123(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/hooks/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_124(cls, owner: str, id: int, repo: str):
+#    """"This will trigger a ping event to be sent to the hook."""
+#    response = cls._call('/repos/{owner}/{repo}/hooks/{id}/pings'.format(owner=owner, id=id, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_125(cls, owner: str, id: int, repo: str):
+#    """"This will trigger the hook with the latest push to the current repository if the hook is subscribed to push events. If the hook is not subscribed to push events, the server will respond with 204 but no test POST will be generated."""
+#    response = cls._call('/repos/{owner}/{repo}/hooks/{id}/tests'.format(owner=owner, id=id, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_127(cls, owner: str, repo: str):
+#    """"This API method and the "Map a commit author" method allow you to provide correct Git author information."""
+#    response = cls._call('/repos/{owner}/{repo}/import/authors'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_128(cls, owner: str, author_id: int, repo: str):
+#    """"Update an author's identity for the import. Your application can continue updating authors any time before you push new commits to the repository."""
+#    response = cls._call('/repos/{owner}/{repo}/import/authors/{author_id}'.format(owner=owner, author_id=author_id, repo=repo), method='PATCH')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_129(cls, owner: str, repo: str):
+#    """"List files larger than 100MB found during the impor."""
+#    response = cls._call('/repos/{owner}/{repo}/import/large_files'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_130(cls, owner: str, repo: str):
+#    """"You can import repositories from Subversion, Mercurial, and TFS that include files larger than 100MB. This ability is powered by Git LFS. You can learn more about our LFS feature and working with large files on our help site."""
+#    response = cls._call('/repos/{owner}/{repo}/import/lfs'.format(owner=owner, repo=repo), method='PATCH')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_131(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/invitations'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_132(cls, owner: str, invitation_id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/invitations/{invitation_id}'.format(owner=owner, invitation_id=invitation_id, repo=repo), method='PATCH')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_134(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/comments'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_135(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/comments/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_136(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/comments/{id}/reactions'.format(owner=owner, id=id, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_137(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/events'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_138(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/events/{id}'.format(owner=owner, id=id, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_141(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/{number}/comments'.format(number=number, owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_142(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/{number}/events'.format(number=number, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_143(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/{number}/labels'.format(number=number, owner=owner, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_146(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/{number}/reactions'.format(number=number, owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_147(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/issues/{number}/timeline'.format(number=number, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_148(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/keys'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_149(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/keys/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_150(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/labels'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_151(cls, owner: str, name: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/labels/{name}'.format(owner=owner, name=name, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_152(cls, owner: str, repo: str):
+#    """"Lists languages for the specified repository. The value shown for each language is the number of bytes of code written in that language."""
+#    response = cls._call('/repos/{owner}/{repo}/languages'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_154(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/merges'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_155(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/milestones'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#classmethod
+#def func_157(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/milestones/{number}/labels'.format(number=number, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_158(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pages'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_159(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pages/builds'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_160(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pages/builds/latest'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_161(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pages/builds/{id}'.format(owner=owner, id=id, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_162(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/projects'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_163(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_164(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/comments'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_166(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/comments/{id}/reactions'.format(owner=owner, id=id, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_167(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}'.format(number=number, owner=owner, repo=repo), method='PATCH')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_168(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/comments'.format(number=number, owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_169(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/commits'.format(number=number, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_170(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/files'.format(number=number, owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_171(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/merge'.format(number=number, owner=owner, repo=repo), method='PUT')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_172(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/requested_reviewers'.format(number=number, owner=owner, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_173(cls, number: int, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/reviews'.format(number=number, owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_174(cls, number: int, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/reviews/{id}'.format(number=number, owner=owner, id=id, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_175(cls, number: int, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/reviews/{id}/comments'.format(number=number, owner=owner, id=id, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_176(cls, number: int, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/reviews/{id}/dismissals'.format(number=number, owner=owner, id=id, repo=repo), method='PUT')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_177(cls, number: int, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/pulls/{number}/reviews/{id}/events'.format(number=number, owner=owner, id=id, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_179(cls, owner: str, repo: str):
+#    """"Users with push access to the repository can create a release."""
+#    response = cls._call('/repos/{owner}/{repo}/releases'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_180(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/releases/assets/{id}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_181(cls, owner: str, repo: str):
+#    """"View the latest published full release for the repository. Draft releases and prereleases are not returned by this endpoint."""
+#    response = cls._call('/repos/{owner}/{repo}/releases/latest'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_184(cls, owner: str, id: int, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/releases/{id}/assets'.format(owner=owner, id=id, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_185(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/stats/code_frequency'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_186(cls, owner: str, repo: str):
+#    """"Returns the last year of commit activity grouped by week.  The days array is a group of commits per day, starting on Sunday."""
+#    response = cls._call('/repos/{owner}/{repo}/stats/commit_activity'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_187(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/stats/contributors'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_188(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/stats/participation'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_189(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/stats/punch_card'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_190(cls, sha: str, owner: str, repo: str):
+#    """"Users with push access can create commit statuses for a given ref."""
+#    response = cls._call('/repos/{owner}/{repo}/statuses/{sha}'.format(sha=sha, owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_191(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/tags'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_192(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/teams'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_193(cls, owner: str, repo: str):
+#    response = cls._call('/repos/{owner}/{repo}/topics'.format(owner=owner, repo=repo), method='PUT')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_194(cls, owner: str, repo: str):
+#    """"Get the total number of clones and breakdown per day or week for the last 14 days. Timestamps are aligned to UTC midnight of the beginning of the day or week. Week begins on Monday."""
+#    response = cls._call('/repos/{owner}/{repo}/traffic/clones'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_195(cls, owner: str, repo: str):
+#    """"Get the top 10 popular contents over the last 14 days."""
+#    response = cls._call('/repos/{owner}/{repo}/traffic/popular/paths'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_196(cls, owner: str, repo: str):
+#    """"Get the top 10 referrers over the last 14 days."""
+#    response = cls._call('/repos/{owner}/{repo}/traffic/popular/referrers'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_197(cls, owner: str, repo: str):
+#    """"Get the total number of views and breakdown per day or week for the last 14 days. Timestamps are aligned to UTC midnight of the beginning of the day or week. Week begins on Monday."""
+#    response = cls._call('/repos/{owner}/{repo}/traffic/views'.format(owner=owner, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_198(cls, owner: str, repo: str):
+#    """"A transfer request will need to be accepted by the new owner when transferring a personal repository to another user. The response will contain the original owner, and the transfer will continue asynchronously. For more details on the requirements to transfer personal and organization-owned repositories, see about repository transfers."""
+#    response = cls._call('/repos/{owner}/{repo}/transfer'.format(owner=owner, repo=repo), method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_199(cls, ref: str, owner: str, archive_format: str, repo: str):
+#    """"Note: For private repositories, these links are temporary and expire after five minutes."""
+#    response = cls._call('/repos/{owner}/{repo}/{archive_format}/{ref}'.format(ref=ref, owner=owner, archive_format=archive_format, repo=repo), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_200(cls, ):
+#    """"Note: Pagination is powered exclusively by the since parameter. Use the Link header to get the URL for the next page of repositories."""
+#    response = cls._call('/repositories', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_201(cls, ):
+#    """"Find file contents via various criteria. (This method returns up to 100 results per page.."""
+#    response = cls._call('/search/code', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_202(cls, ):
+#    """"Find commits via various criteria. (This method returns up to 100 results per page.."""
+#    response = cls._call('/search/commits', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_203(cls, ):
+#    """"Find issues by state and keyword. (This method returns up to 100 results per page.."""
+#    response = cls._call('/search/issues', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_204(cls, ):
+#    """"Find repositories via various criteria. This method returns up to 100 results per page."""
+#    response = cls._call('/search/repositories', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_205(cls, ):
+#    """"Find users via various criteria. (This method returns up to 100 results per page.."""
+#    response = cls._call('/search/users', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_207(cls, id: int):
+#    """"The return hash contains a role field which refers to the Organization Invitation role and will be one of the following values: direct_member, admin, billing_manager, hiring_manager, or reinstate. If the invitee is not a GitHub member, the login field in the return hash will be null."""
+#    response = cls._call('/teams/{id}/invitations'.format(id=id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_208(cls, id: int):
+#    """"To list members in a team, the team must be visible to the authenticated user."""
+#    response = cls._call('/teams/{id}/members'.format(id=id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_209(cls, id: int, username: str):
+#    """"To remove a membership between a user and a team, the authenticated user must have 'admin' permissions to the team or be an owner of the organization that the team is associated with. NOTE: This does not delete the user, it just removes their membership from the team."""
+#    response = cls._call('/teams/{id}/memberships/{username}'.format(id=id, username=username), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_210(cls, id: int):
+#    """"Note: If you pass the hellcat-preview media type, the response will include any repositories inherited through a parent team."""
+#    response = cls._call('/teams/{id}/repos'.format(id=id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_211(cls, org: str, id: int, repo: str):
+#    """"To add a repository to a team or update the team's permission on a repository, the authenticated user must have admin access to the repository, and must be able to see the team. Also, the repository must be owned by the organization, or a direct fork of a repository owned by the organization."""
+#    response = cls._call('/teams/{id}/repos/{org}/{repo}'.format(org=org, id=id, repo=repo), method='PUT')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_212(cls, owner: str, id: int, repo: str):
+#    """"If the authenticated user is an organization owner or a team maintainer, they can remove any repositories from the team. To remove a repository from a team as an organization member, the authenticated user must have admin access to the repository and must be able to see the team. NOTE: This does not delete the repository, it just removes it from the team."""
+#    response = cls._call('/teams/{id}/repos/{owner}/{repo}'.format(owner=owner, id=id, repo=repo), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_213(cls, id: int):
+#    """"At this time, the hellcat-preview media type is required to use this endpoint."""
+#    response = cls._call('/teams/{id}/teams'.format(id=id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_215(cls, ):
+#    """"List the users you've blocked on your personal account."""
+#    response = cls._call('/user/blocks', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_217(cls, ):
+#    response = cls._call('/user/email/visibility', method='PATCH')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_219(cls, ):
+#    """"List the authenticated user's followers."""
+#    response = cls._call('/user/followers', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_220(cls, ):
+#    """"List who the authenticated user is following."""
+#    response = cls._call('/user/following', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_221(cls, username: str):
+#    response = cls._call('/user/following/{username}'.format(username=username), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_222(cls, ):
+#    """"Creates a GPG key. Requires that you are authenticated via Basic Auth, or OAuth with at least write:gpg_key scope."""
+#    response = cls._call('/user/gpg_keys', method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_223(cls, id: int):
+#    """"Removes a GPG key. Requires that you are authenticated via Basic Auth or via OAuth with at least admin:gpg_key scope."""
+#    response = cls._call('/user/gpg_keys/{id}'.format(id=id), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_224(cls, installation_id: int):
+#    """"List repositories that are accessible to the authenticated user for an installation."""
+#    response = cls._call('/user/installations/{installation_id}/repositories'.format(installation_id=installation_id), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_225(cls, installation_id: int, repository_id: int):
+#    """"Remove a single repository from an installation."""
+#    response = cls._call('/user/installations/{installation_id}/repositories/{repository_id}'.format(installation_id=installation_id, repository_id=repository_id), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_227(cls, ):
+#    """"List all issues across owned and member repositories assigned to the authenticated user."""
+#    response = cls._call('/user/issues', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_228(cls, ):
+#    """"Creates a public key. Requires that you are authenticated via Basic Auth, or OAuth with at least write:public_key scope."""
+#    response = cls._call('/user/keys', method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_229(cls, id: int):
+#    """"Removes a public key. Requires that you are authenticated via Basic Auth or via OAuth with at least admin:public_key scope."""
+#    response = cls._call('/user/keys/{id}'.format(id=id), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_230(cls, ):
+#    response = cls._call('/user/memberships/orgs', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_231(cls, org: str):
+#    response = cls._call('/user/memberships/orgs/{org}'.format(org=org), method='PATCH')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_233(cls, ):
+#    """"Create a new repository for the authenticated user."""
+#    response = cls._call('/user/repos', method='POST')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_234(cls, ):
+#    response = cls._call('/user/repository_invitations', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_235(cls, invitation_id: int):
+#    response = cls._call('/user/repository_invitations/{invitation_id}'.format(invitation_id=invitation_id), method='DELETE')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_236(cls, ):
+#    """"List all of the teams across all of the organizations to which the authenticated user belongs. This method requires user, repo, or read:org scope when authenticating via OAuth."""
+#    response = cls._call('/user/teams', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_237(cls, ):
+#    """"Note: Pagination is powered exclusively by the since parameter. Use the Link header to get the URL for the next page of users."""
+#    response = cls._call('/users', method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_238(cls, username: str):
+#    response = cls._call('/users/{username}'.format(username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_239(cls, username: str):
+#    """"List a user's followers."""
+#    response = cls._call('/users/{username}/followers'.format(username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_240(cls, username: str):
+#    """"List who a user is following."""
+#    response = cls._call('/users/{username}/following'.format(username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_241(cls, target_user: str, username: str):
+#    response = cls._call('/users/{username}/following/{target_user}'.format(target_user=target_user, username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_242(cls, username: str):
+#    """"List public gists for the specified user."""
+#    response = cls._call('/users/{username}/gists'.format(username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_243(cls, username: str):
+#    response = cls._call('/users/{username}/gpg_keys'.format(username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_244(cls, username: str):
+#    response = cls._call('/users/{username}/keys'.format(username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_245(cls, username: str):
+#    """"This method only lists public memberships, regardless of authentication. If you need to fetch all of the organization memberships (public and private) for the authenticated user, use the List your organizations API instead."""
+#    response = cls._call('/users/{username}/orgs'.format(username=username), method='GET')
+#    return cls.from_response(response)
+#
+#@classmethod
+#def func_246(cls, username: str):
+#    """"List public repositories for the specified user."""
+#    response = cls._call('/users/{username}/repos'.format(username=username), method='GET')
+#    return cls.from_response(response)
