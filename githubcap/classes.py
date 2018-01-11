@@ -11,7 +11,7 @@ import githubcap.schemas as schemas
 
 @attr.s
 class User(GitHubBase):
-    """TODO: add a description"""
+    """A GitHub user."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.USER_SCHEMA
 
@@ -48,10 +48,9 @@ class User(GitHubBase):
     updated_at = attr.ib(type=datetime, default=None)
 
 
-
 @attr.s
 class RepositoryPermissions(GitHubBase):
-    """TODO: add a description"""
+    """Permissions for a repository."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.REPOSITORY_PERMISSIONS_SCHEMA
 
@@ -60,10 +59,9 @@ class RepositoryPermissions(GitHubBase):
     push = attr.ib(type=bool)
 
 
-
 @attr.s
 class Organization(GitHubBase):
-    """TODO: add a description"""
+    """A GitHub organization."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.ORGANIZATION_SCHEMA
 
@@ -80,10 +78,9 @@ class Organization(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class License(GitHubBase):
-    """TODO: add a description"""
+    """License definition."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.LICENSE_SCHEMA
 
@@ -93,10 +90,9 @@ class License(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Repository(GitHubBase):
-    """TODO: add a description"""
+    """A repository definition."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.REPOSITORY_SCHEMA
 
@@ -181,10 +177,9 @@ class Repository(GitHubBase):
     topics = attr.ib(type=typing.List[str], default=None)
 
 
-
 @attr.s
 class App(GitHubBase):
-    """TODO: add a description"""
+    """GitHub application."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.APP_SCHEMA
 
@@ -193,10 +188,9 @@ class App(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Authorization(GitHubBase):
-    """TODO: add a description"""
+    """Authorization definition."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.AUTHORIZATION_SCHEMA
 
@@ -214,10 +208,9 @@ class Authorization(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class AuthorizationInfo(GitHubBase):
-    """TODO: add a description"""
+    """Authorization information."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.AUTHORIZATION_INFO_SCHEMA
 
@@ -236,10 +229,9 @@ class AuthorizationInfo(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class ThreadSubscription(GitHubBase):
-    """TODO: add a description"""
+    """Subscription to a thread."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.THREAD_SUBSCRIPTION_SCHEMA
 
@@ -251,10 +243,9 @@ class ThreadSubscription(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class GistFork(GitHubBase):
-    """TODO: add a description"""
+    """Fork of a gist."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIST_FORK_SCHEMA
 
@@ -265,10 +256,9 @@ class GistFork(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class GistHistory(GitHubBase):
-    """TODO: add a description"""
+    """Gist history representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIST_HISTORY_SCHEMA
 
@@ -279,10 +269,9 @@ class GistHistory(GitHubBase):
     version = attr.ib(type=str)
 
 
-
 @attr.s
 class Gist(GitHubBase):
-    """TODO: add a description"""
+    """A GitHub gist."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIST_SCHEMA
 
@@ -307,10 +296,9 @@ class Gist(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class GistComment(GitHubBase):
-    """TODO: add a description"""
+    """A comment to a gist."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIST_COMMENT_SCHEMA
 
@@ -322,10 +310,9 @@ class GistComment(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class CommitRef(GitHubBase):
-    """TODO: add a description"""
+    """A commit ref."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.COMMIT_REF_SCHEMA
 
@@ -333,10 +320,9 @@ class CommitRef(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class CommitPersonInfo(GitHubBase):
-    """TODO: add a description"""
+    """Information about a person (committer or author) of a commit."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.COMMIT_PERSON_INFO_SCHEMA
 
@@ -345,10 +331,9 @@ class CommitPersonInfo(GitHubBase):
     name = attr.ib(type=str)
 
 
-
 @attr.s
 class Commit(GitHubBase):
-    """TODO: add a description"""
+    """A commit representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.COMMIT_SCHEMA
 
@@ -362,10 +347,9 @@ class Commit(GitHubBase):
     verification = attr.ib(type=dict)
 
 
-
 @attr.s
 class GitObject(GitHubBase):
-    """TODO: add a description"""
+    """Git object representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIT_OBJECT_SCHEMA
 
@@ -374,10 +358,9 @@ class GitObject(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class GitRef(GitHubBase):
-    """TODO: add a description"""
+    """A git ref."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIT_REF_SCHEMA
 
@@ -386,10 +369,9 @@ class GitRef(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class GitVerification(GitHubBase):
-    """TODO: add a description"""
+    """Git verification entry."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIT_VERIFICATION_SCHEMA
 
@@ -399,10 +381,9 @@ class GitVerification(GitHubBase):
     verified = attr.ib(type=bool)
 
 
-
 @attr.s
 class GitTag(GitHubBase):
-    """TODO: add a description"""
+    """A tag in Git."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIT_TAG_SCHEMA
 
@@ -415,10 +396,9 @@ class GitTag(GitHubBase):
     verification = attr.ib(type=GitVerification)
 
 
-
 @attr.s
 class GitTreeStructure(GitHubBase):
-    """TODO: add a description"""
+    """"Git tree structure."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIT_TREE_STRUCTURE_SCHEMA
 
@@ -431,10 +411,9 @@ class GitTreeStructure(GitHubBase):
     url = attr.ib(type=str, default=None)
 
 
-
 @attr.s
 class GitTree(GitHubBase):
-    """TODO: add a description"""
+    """Git tree."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GIT_TREE_SCHEMA
 
@@ -444,10 +423,9 @@ class GitTree(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class GithubApp(GitHubBase):
-    """TODO: add a description"""
+    """GitHub application."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GITHUB_APP_SCHEMA
 
@@ -461,10 +439,9 @@ class GithubApp(GitHubBase):
     updated_at = attr.ib(type=datetime)
 
 
-
 @attr.s
 class RepositoriesListing(GitHubBase):
-    """TODO: add a description"""
+    """A listing of repositories."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.REPOSITORIES_LISTING_SCHEMA
 
@@ -472,10 +449,9 @@ class RepositoriesListing(GitHubBase):
     total_count = attr.ib(type=int)
 
 
-
 @attr.s
 class IssueComment(GitHubBase):
-    """TODO: add a description"""
+    """A comment to an issue."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.ISSUE_COMMENT_SCHEMA
 
@@ -488,10 +464,9 @@ class IssueComment(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class Label(GitHubBase):
-    """TODO: add a description"""
+    """GitHub label."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.LABEL_SCHEMA
 
@@ -502,10 +477,9 @@ class Label(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Milestone(GitHubBase):
-    """TODO: add a description"""
+    """A milestone on GitHub."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.MILESTONE_SCHEMA
 
@@ -526,10 +500,9 @@ class Milestone(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Migration(GitHubBase):
-    """TODO: add a description"""
+    """GitHub migration."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.MIGRATION_SCHEMA
 
@@ -544,10 +517,9 @@ class Migration(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class SourceImport(GitHubBase):
-    """TODO: add a description"""
+    """Source importing."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.SOURCE_IMPORT_SCHEMA
 
@@ -568,10 +540,9 @@ class SourceImport(GitHubBase):
     vcs_url = attr.ib(type=str)
 
 
-
 @attr.s
 class CodeOfConduct(GitHubBase):
-    """TODO: add a description"""
+    """Code of conduct on GitHub."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.CODE_OF_CONDUCT_SCHEMA
 
@@ -581,10 +552,9 @@ class CodeOfConduct(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class OrganizationMembership(GitHubBase):
-    """TODO: add a description"""
+    """Membership to an organization."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.ORGANIZATION_MEMBERSHIP_SCHEMA
 
@@ -596,10 +566,9 @@ class OrganizationMembership(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class ErrorReport(GitHubBase):
-    """TODO: add a description"""
+    """An error report."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.ERROR_REPORT_SCHEMA
 
@@ -608,10 +577,9 @@ class ErrorReport(GitHubBase):
     documentation_url = attr.ib(type=str, default=None)
 
 
-
 @attr.s
 class ErrorTeam(GitHubBase):
-    """TODO: add a description"""
+    """An error reported with teams."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.ERROR_TEAM_SCHEMA
 
@@ -619,10 +587,9 @@ class ErrorTeam(GitHubBase):
     message = attr.ib(type=str)
 
 
-
 @attr.s
 class Hook(GitHubBase):
-    """TODO: add a description"""
+    """GitHub hook representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.HOOK_SCHEMA
 
@@ -639,10 +606,9 @@ class Hook(GitHubBase):
     test_url = attr.ib(type=str, default=None)
 
 
-
 @attr.s
 class ProjectCard(GitHubBase):
-    """TODO: add a description"""
+    """GitHub project card."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.PROJECT_CARD_SCHEMA
 
@@ -656,10 +622,9 @@ class ProjectCard(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class ProjectColumn(GitHubBase):
-    """TODO: add a description"""
+    """GitHub project column."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.PROJECT_COLUMN_SCHEMA
 
@@ -672,10 +637,9 @@ class ProjectColumn(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Branch(GitHubBase):
-    """TODO: add a description"""
+    """Git branch info."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.BRANCH_SCHEMA
 
@@ -686,10 +650,9 @@ class Branch(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class PullRequest(GitHubBase):
-    """TODO: add a description"""
+    """A pull request representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.PULL_REQUEST_SCHEMA
 
@@ -721,10 +684,9 @@ class PullRequest(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class Review(GitHubBase):
-    """TODO: add a description"""
+    """A pull request review."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.REVIEW_SCHEMA
 
@@ -738,10 +700,9 @@ class Review(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class PullRequestComment(GitHubBase):
-    """TODO: add a description"""
+    """A pull request comment."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.PULL_REQUEST_COMMENT_SCHEMA
 
@@ -764,10 +725,9 @@ class PullRequestComment(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class CommentReaction(GitHubBase):
-    """TODO: add a description"""
+    """A comment reaction."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.COMMENT_REACTION_SCHEMA
 
@@ -777,20 +737,18 @@ class CommentReaction(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class TopicsListing(GitHubBase):
-    """TODO: add a description"""
+    """A listing of topics assigned to a repo."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.TOPICS_LISTING_SCHEMA
 
     names = attr.ib(type=typing.List[str])
 
 
-
 @attr.s
 class CommitComment(GitHubBase):
-    """TODO: add a description"""
+    """A comment to a commit."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.COMMIT_COMMENT_SCHEMA
 
@@ -807,10 +765,9 @@ class CommitComment(GitHubBase):
     user = attr.ib(type=User)
 
 
-
 @attr.s
 class ContentEntry(GitHubBase):
-    """TODO: add a description"""
+    """A content entry."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.CONTENT_ENTRY_SCHEMA
 
@@ -826,10 +783,9 @@ class ContentEntry(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Content(GitHubBase):
-    """TODO: add a description"""
+    """GitHub content."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.CONTENT_SCHEMA
 
@@ -837,26 +793,9 @@ class Content(GitHubBase):
     content = attr.ib(type=typing.Union[ContentEntry, None])
 
 
-
-@attr.s
-class Key(GitHubBase):
-    """TODO: add a description"""
-
-    _SCHEMA: typing.ClassVar[Schema] = schemas.KEY_SCHEMA
-
-    created_at = attr.ib(type=datetime)
-    id = attr.ib(type=int)
-    key = attr.ib(type=str)
-    read_only = attr.ib(type=bool)
-    title = attr.ib(type=str)
-    url = attr.ib(type=str)
-    verified = attr.ib(type=bool)
-
-
-
 @attr.s
 class Invitation(GitHubBase):
-    """TODO: add a description"""
+    """GitHub invitation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.INVITATION_SCHEMA
 
@@ -870,10 +809,9 @@ class Invitation(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class ReleaseAsset(GitHubBase):
-    """TODO: add a description"""
+    """Release asset representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.RELEASE_ASSET_SCHEMA
 
@@ -890,10 +828,9 @@ class ReleaseAsset(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Release(GitHubBase):
-    """TODO: add a description"""
+    """A project release on GitHub."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.RELEASE_SCHEMA
 
@@ -924,10 +861,9 @@ class Release(GitHubBase):
     zipball_url = attr.ib(type=str)
 
 
-
 @attr.s
 class SearchResult(GitHubBase):
-    """TODO: add a description"""
+    """A search result (a search entry)."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.SEARCH_RESULT_SCHEMA
 
@@ -938,20 +874,18 @@ class SearchResult(GitHubBase):
     property = attr.ib(type=str)
 
 
-
 @attr.s
 class SearchResults(GitHubBase):
-    """TODO: add a description"""
+    """Listing of search results."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.SEARCH_RESULTS_SCHEMA
 
     text_matches = attr.ib(type=typing.List['SearchResults'])
 
 
-
 @attr.s
 class GpgKey(GitHubBase):
-    """TODO: add a description"""
+    """A GPG key representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.GPG_KEY_SCHEMA
 
@@ -969,10 +903,24 @@ class GpgKey(GitHubBase):
     subkeys = attr.ib(type=typing.List['GpgKey'])
 
 
+@attr.s
+class Key(GitHubBase):
+    """GitHub key representation."""
+
+    _SCHEMA: typing.ClassVar[Schema] = schemas.KEY_SCHEMA
+
+    created_at = attr.ib(type=datetime)
+    id = attr.ib(type=int)
+    key = attr.ib(type=str)
+    read_only = attr.ib(type=bool)
+    title = attr.ib(type=str)
+    url = attr.ib(type=str)
+    verified = attr.ib(type=bool)
+
 
 @attr.s
 class Issue(GitHubBase):
-    """TODO: add a description"""
+    """An issue representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.ISSUE_SCHEMA
 
