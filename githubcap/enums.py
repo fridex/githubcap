@@ -162,6 +162,7 @@ class AuthorAssociation(GitHubCapEnum):
     MEMBER = 'MEMBER'
     COLLABORATOR = 'COLLABORATOR'
     FIRST_TIME_CONTRIBUTOR = 'FIRST_TIME_CONTRIBUTOR'
+    FIRST_TIMER = 'FIRST_TIMER'
     NONE = 'NONE'
 
     @classmethod
