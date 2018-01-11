@@ -47,6 +47,18 @@ class User(GitHubBase):
     public_repos = attr.ib(type=int, default=None)
     updated_at = attr.ib(type=datetime, default=None)
 
+    def remove_from_organization(self, org: str):
+        """"In order to remove a user's membership with an organization, the authenticated user must be an organization owner."""
+        Organization.remove_user_from_organization(org, self.login)
+
+    @classmethod
+    def publicize_organization_membership_by_username(cls, org: str, username: str):
+        Organization.publicize_user_membership_by_username(org, username)
+
+    @classmethod
+    def hide_organization_membership_by_username(cls, org: str, username: str):
+        Organization.hide_user_membership_by_username(org, username)
+
 
 @attr.s
 class RepositoryPermissions(GitHubBase):
@@ -77,6 +89,48 @@ class Organization(GitHubBase):
     repos_url = attr.ib(type=str)
     url = attr.ib(type=str)
 
+    @classmethod
+    def get_by_name(cls, org: str):
+        response = cls._call('/orgs/{org}'.format(org=org), method='PATCH')
+        return cls.from_response(result)
+
+    @classmethod
+    def remove_user_from_organization(cls, org: str, username: str):
+        """"In order to remove a user's membership with an organization, the authenticated user must be an organization owner."""
+        response = cls._call('/orgs/{org}/memberships/{username}'.format(org=org, username=username), method='DELETE')
+
+    @classmethod
+    def remove_user(cls, org: str, username: str):
+        """"In order to remove a user's membership with an organization, the authenticated user must be an organization owner."""
+        self.remove_user_from_organization(self.login, username)
+
+    @classmethod
+    def publicize_user_membership_by_username(cls, org: str, username: str):
+        cls._call('/orgs/{org}/public_members/{username}'.format(org=org, username=username), method='DELETE')
+
+    @classmethod
+    def hide_user_membership_by_username(cls, org: str, username: str):
+        cls._call('/orgs/{org}/public_members/{username}'.format(org=org, username=username), method='DELETE')
+
+    @classmethod
+    def create_repository_in_organization(cls, org: str, repository: Repository) -> Repository:
+        """"Create a new repository in a organization. The authenticated user must be a member of the specified organization."""
+        response = cls._call('/orgs/{org}/repos'.format(org=org), payload=Repository.as_dict(), method='POST')
+        return Repository.from_response(result)
+
+    def create_repository(self, repository: Repository) -> Repository:
+        """"Create a new repository in this organization. The authenticated user must be a member of the specified organization."""
+        return self.create_repository_in_organization(self.login, Repository)
+
+    @classmethod
+    def create_team_in_organization(cls, org: str, team: Team):
+        """"To create a team, the authenticated user must be a member of org."""
+        return Team.create_in_organization(org, team)
+
+    def create_team(self, org: str, team: Team):
+        """"To create a team, the authenticated user must be a member of org."""
+        return Team.create_in_organization(org, team)
+
 
 @attr.s
 class License(GitHubBase):
@@ -86,8 +140,13 @@ class License(GitHubBase):
 
     key = attr.ib(type=str)
     name = attr.ib(type=str)
-    spdx_id = attr.ib(type=typing.Union[str, None])
+    spdx_id = attr.ib(type=str)
     url = attr.ib(type=str)
+
+    @classmethod
+    def get_by_name(cls, license: str):
+        response = cls._call('/licenses/{license}'.format(license=license), method='GET')
+        return cls.from_response(result)
 
 
 @attr.s
@@ -96,85 +155,98 @@ class Repository(GitHubBase):
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.REPOSITORY_SCHEMA
 
-    archived = attr.ib(type=bool)
-    archive_url = attr.ib(type=str)
-    assignees_url = attr.ib(type=str)
-    blobs_url = attr.ib(type=str)
-    branches_url = attr.ib(type=str)
-    clone_url = attr.ib(type=str)
-    collaborators_url = attr.ib(type=str)
-    comments_url = attr.ib(type=str)
-    commits_url = attr.ib(type=str)
-    compare_url = attr.ib(type=str)
-    contents_url = attr.ib(type=str)
-    contributors_url = attr.ib(type=str)
-    created_at = attr.ib(type=datetime)
-    default_branch = attr.ib(type=str)
-    deployments_url = attr.ib(type=str)
-    description = attr.ib(type=typing.Union[str, None])
-    downloads_url = attr.ib(type=str)
-    events_url = attr.ib(type=str)
-    fork = attr.ib(type=bool)
-    forks = attr.ib(type=int)
-    forks_count = attr.ib(type=int)
-    forks_url = attr.ib(type=str)
-    full_name = attr.ib(type=str)
-    git_commits_url = attr.ib(type=str)
-    git_refs_url = attr.ib(type=str)
-    git_tags_url = attr.ib(type=str)
-    git_url = attr.ib(type=str)
-    has_downloads = attr.ib(type=bool)
-    has_issues = attr.ib(type=bool)
-    has_pages = attr.ib(type=bool)
-    has_projects = attr.ib(type=bool)
-    has_wiki = attr.ib(type=bool)
-    homepage = attr.ib(type=typing.Union[str, None])
-    hooks_url = attr.ib(type=str)
-    html_url = attr.ib(type=str)
-    id = attr.ib(type=int)
-    issue_comment_url = attr.ib(type=str)
-    issue_events_url = attr.ib(type=str)
-    issues_url = attr.ib(type=str)
-    keys_url = attr.ib(type=str)
-    labels_url = attr.ib(type=str)
-    language = attr.ib(type=typing.Union[str, None])
-    languages_url = attr.ib(type=str)
-    license = attr.ib(type=typing.Union[str, None])
-    merges_url = attr.ib(type=str)
-    milestones_url = attr.ib(type=str)
-    mirror_url = attr.ib(type=str)
     name = attr.ib(type=str)
-    notifications_url = attr.ib(type=str)
-    open_issues = attr.ib(type=int)
-    open_issues_count = attr.ib(type=int)
-    owner = attr.ib(type=User)
-    private = attr.ib(type=bool)
-    pulls_url = attr.ib(type=str)
-    pushed_at = attr.ib(type=datetime)
-    releases_url = attr.ib(type=str)
-    size = attr.ib(type=int)
-    ssh_url = attr.ib(type=str)
-    stargazers_count = attr.ib(type=int)
-    stargazers_url = attr.ib(type=str)
-    statuses_url = attr.ib(type=str)
-    subscribers_url = attr.ib(type=str)
-    subscription_url = attr.ib(type=str)
-    svn_url = attr.ib(type=str)
-    tags_url = attr.ib(type=str)
-    teams_url = attr.ib(type=str)
-    trees_url = attr.ib(type=str)
-    updated_at = attr.ib(type=datetime)
-    url = attr.ib(type=str)
-    watchers = attr.ib(type=int)
-    watchers_count = attr.ib(type=int)
 
     allow_merge_commit = attr.ib(type=bool, default=None)
     allow_rebase_merge = attr.ib(type=bool, default=None)
     allow_squash_merge = attr.ib(type=bool, default=None)
+    archived = attr.ib(type=bool, default=None)
+    archive_url = attr.ib(type=str, default=None)
+    assignees_url = attr.ib(type=str, default=None)
+    blobs_url = attr.ib(type=str, default=None)
+    branches_url = attr.ib(type=str, default=None)
+    clone_url = attr.ib(type=str, default=None)
+    collaborators_url = attr.ib(type=str, default=None)
+    comments_url = attr.ib(type=str, default=None)
+    commits_url = attr.ib(type=str, default=None)
+    compare_url = attr.ib(type=str, default=None)
+    contents_url = attr.ib(type=str, default=None)
+    contributors_url = attr.ib(type=str, default=None)
+    created_at = attr.ib(type=datetime, default=None)
+    default_branch = attr.ib(type=str, default=None)
+    deployments_url = attr.ib(type=str, default=None)
+    description = attr.ib(type=str, default=None)
+    downloads_url = attr.ib(type=str, default=None)
+    events_url = attr.ib(type=str, default=None)
+    fork = attr.ib(type=bool, default=None)
+    forks = attr.ib(type=int, default=None)
+    forks_count = attr.ib(type=int, default=None)
+    forks_url = attr.ib(type=str, default=None)
+    full_name = attr.ib(type=str, default=None)
+    git_commits_url = attr.ib(type=str, default=None)
+    git_refs_url = attr.ib(type=str, default=None)
+    git_tags_url = attr.ib(type=str, default=None)
+    git_url = attr.ib(type=str, default=None)
+    has_downloads = attr.ib(type=bool, default=None)
+    has_issues = attr.ib(type=bool, default=None)
+    has_pages = attr.ib(type=bool, default=None)
+    has_projects = attr.ib(type=bool, default=None)
+    has_wiki = attr.ib(type=bool, default=None)
+    homepage = attr.ib(type=str, default=None)
+    hooks_url = attr.ib(type=str, default=None)
+    html_url = attr.ib(type=str, default=None)
+    id = attr.ib(type=int, default=None)
+    issue_comment_url = attr.ib(type=str, default=None)
+    issue_events_url = attr.ib(type=str, default=None)
+    issues_url = attr.ib(type=str, default=None)
+    keys_url = attr.ib(type=str, default=None)
+    labels_url = attr.ib(type=str, default=None)
+    language = attr.ib(type=str, default=None)
+    languages_url = attr.ib(type=str, default=None)
+    license = attr.ib(type=str, default=None)
+    merges_url = attr.ib(type=str, default=None)
+    milestones_url = attr.ib(type=str, default=None)
+    mirror_url = attr.ib(type=str, default=None)
     network_count = attr.ib(type=int, default=None)
+    notifications_url = attr.ib(type=str, default=None)
+    open_issues = attr.ib(type=int, default=None)
+    open_issues_count = attr.ib(type=int, default=None)
+    owner = attr.ib(type=User, default=None)
     permissions = attr.ib(type=RepositoryPermissions, default=None)
+    private = attr.ib(type=bool, default=None)
+    pulls_url = attr.ib(type=str, default=None)
+    pushed_at = attr.ib(type=datetime, default=None)
+    releases_url = attr.ib(type=str, default=None)
+    size = attr.ib(type=int, default=None)
+    ssh_url = attr.ib(type=str, default=None)
+    stargazers_count = attr.ib(type=int, default=None)
+    stargazers_url = attr.ib(type=str, default=None)
+    statuses_url = attr.ib(type=str, default=None)
     subscribers_count = attr.ib(type=int, default=None)
+    subscribers_url = attr.ib(type=str, default=None)
+    subscription_url = attr.ib(type=str, default=None)
+    svn_url = attr.ib(type=str, default=None)
+    tags_url = attr.ib(type=str, default=None)
+    teams_url = attr.ib(type=str, default=None)
     topics = attr.ib(type=typing.List[str], default=None)
+    trees_url = attr.ib(type=str, default=None)
+    updated_at = attr.ib(type=datetime, default=None)
+    url = attr.ib(type=str, default=None)
+    watchers = attr.ib(type=int, default=None)
+    watchers_count = attr.ib(type=int, default=None)
+
+    def create_in_organization(self, org) -> Repository:
+        """"Create a new repository in an organization. The authenticated user must be a member of the specified organization."""
+        return Organization.create_repository_in_organization(org, Repository)
+
+    @classmethod
+    def delete_repository(cls, owner: str, repo: str):
+        """"Deleting a repository requires admin access.  If OAuth is used, the delete_repo scope is required."""
+        cls._call('/repos/{owner}/{repo}'.format(owner=owner, repo=repo), method='DELETE')
+
+    def detele(self):
+        owner, name  = self.full_name.split('/')
+        self.delete_repository(owner, name)
 
 
 @attr.s
@@ -186,6 +258,17 @@ class App(GitHubBase):
     client_id = attr.ib(type=str)
     name = attr.ib(type=str)
     url = attr.ib(type=str)
+
+    @classmethod
+    def get(cls):
+        """"Returns the GitHub App associated with the authentication credentials used."""
+        response = cls._call('/app'), method='GET')
+        return cls.from_response(response)
+
+    @classmethod
+    def get_by_app_slug(cls, app_slug: str):
+        response = cls._call('/apps/{app_slug}'.format(app_slug=app_slug), method='GET')
+        return cls.from_response(response)
 
 
 @attr.s
@@ -237,7 +320,7 @@ class ThreadSubscription(GitHubBase):
 
     created_at = attr.ib(type=datetime)
     ignored = attr.ib(type=bool)
-    reason = attr.ib(type=typing.Union[str, None])
+    reason = attr.ib(type=str)
     subscribed = attr.ib(type=bool)
     thread_url = attr.ib(type=str)
     url = attr.ib(type=str)
@@ -295,6 +378,34 @@ class Gist(GitHubBase):
     url = attr.ib(type=str)
     user = attr.ib(type=User)
 
+    @classmethod
+    def delete_by_id(cls, id: int):
+        response = cls._call('/authorizations/{id}'.format(id=id), method='DELETE')
+
+    def delete(self):
+        self.delete_by_id(self.id)
+
+    @classmethod
+    def get_by_id(cls, id: int):
+        response = cls._call('/gists/{id}'.format(id=id), method='DELETE')
+        return cls.from_response(result)
+
+    @classmethod
+    def is_starred_by_id(cls, id: int):
+        response = cls._call('/gists/{id}/star'.format(id=id), method='GET')
+        # TODO: 204 is starred
+        # TODO: 404 not starred
+
+    @classmethod
+    def is_starred(cls, id: int):
+        response = cls._call('/gists/{id}/star'.format(id=self.id), method='GET')
+        # TODO: 204 is starred
+        # TODO: 404 not starred
+
+    @classmethod
+    def get_by_revision(cls, sha: str, id: int):
+        response = cls._call('/gists/{id}/{sha}'.format(sha=sha, id=id), method='GET')
+        return cls.from_response(result)
 
 @attr.s
 class GistComment(GitHubBase):
@@ -308,6 +419,12 @@ class GistComment(GitHubBase):
     updated_at = attr.ib(type=datetime)
     url = attr.ib(type=str)
     user = attr.ib(type=User)
+
+    @classmethod
+    def get_by_id(cls, id: int, gist_id: int):
+        response = cls._call('/gists/{gist_id}/comments/{id}'.format(id=id, gist_id=gist_id), method='DELETE')
+        return cls.from_response(response)
+
 
 
 @attr.s
@@ -483,12 +600,12 @@ class Milestone(GitHubBase):
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.MILESTONE_SCHEMA
 
-    closed_at = attr.ib(type=typing.Union[datetime, None])
+    closed_at = attr.ib(type=datetime)
     closed_issues = attr.ib(type=int)
     created_at = attr.ib(type=datetime)
     creator = attr.ib(type=User)
-    description = attr.ib(type=typing.Union[str, None])
-    due_on = attr.ib(type=typing.Union[str, None])
+    description = attr.ib(type=str)
+    due_on = attr.ib(type=str)
     html_url = attr.ib(type=str)
     id = attr.ib(type=int)
     labels_url = attr.ib(type=str)
@@ -496,7 +613,7 @@ class Milestone(GitHubBase):
     open_issues = attr.ib(type=int)
     state = attr.ib(type=str)
     title = attr.ib(type=str)
-    updated_at = attr.ib(type=typing.Union[datetime, None])
+    updated_at = attr.ib(type=datetime)
     url = attr.ib(type=str)
 
 
@@ -515,6 +632,26 @@ class Migration(GitHubBase):
     state = attr.ib(type=str)
     updated_at = attr.ib(type=datetime)
     url = attr.ib(type=str)
+
+    @classmethod
+    def fetch_status(cls, org: str, id: int):
+        """"Fetches the status of a migration."""
+        response = cls._call('/orgs/{org}/migrations/{id}'.format(org=org, id=id), method='GET')
+        return cls.from_response(result)
+
+    @classmethod
+    def delete_migration_archive(cls, org: str, id: int):
+        """"Deletes a previous migration archive. Migration archives are automatically deleted after seven days."""
+        cls._call('/orgs/{org}/migrations/{id}/archive'.format(org=org, id=id), method='DELETE')
+
+    @classmethod
+    def unlock_repository(cls, org: str, id: int, repo_name: str):
+        """"Unlocks a repository that was locked for migration. You should unlock each migrated repository and delete them when the migration is complete and you no longer need the source data."""
+        response = cls._call('/orgs/{org}/migrations/{id}/repos/{repo_name}/lock'.format(org=org, id=id, repo_name=repo_name), method='DELETE')
+        return cls.from_response(result)
+
+
+
 
 
 @attr.s
@@ -550,6 +687,16 @@ class CodeOfConduct(GitHubBase):
     key = attr.ib(type=str)
     name = attr.ib(type=str)
     url = attr.ib(type=str)
+
+    @classmethod
+    def get(cls):
+        response = cls._call('/codes_of_conduct', method='GET')
+        return cls.from_response(response)
+    
+    @classmethod
+    def get_by_key(cls, key: str):
+        response = cls._call('/codes_of_conduct/{key}'.format(key=key), method='GET')
+        return cls.from_response(response)
 
 
 @attr.s
@@ -605,6 +752,17 @@ class Hook(GitHubBase):
 
     test_url = attr.ib(type=str, default=None)
 
+    @classmethod
+    def get_by_id(cls, org: str, id: int):
+        response = cls._call('/orgs/{org}/hooks/{id}'.format(org=org, id=id), method='DELETE')
+        return cls.from_response(result)
+
+    @classmethod
+    def ping_hook(cls, org: str, id: int):
+        """"This will trigger a ping event to be sent to the hook."""
+        response = cls._call('/orgs/{org}/hooks/{id}/pings'.format(org=org, id=id), method='POST')
+        return cls.from_response(result)
+
 
 @attr.s
 class ProjectCard(GitHubBase):
@@ -621,6 +779,26 @@ class ProjectCard(GitHubBase):
     updated_at = attr.ib(type=datetime)
     url = attr.ib(type=str)
 
+    @classmethod
+    def delete_by_id(cls, card_id: int):
+        response = cls._call('/projects/columns/cards/{card_id}'.format(card_id=card_id), method='DELETE')
+
+    def delete(self):
+        self.delete_by_id(self.id)
+
+    @classmethod
+    def move_by_id(cls, card_id: int, position: int, column_id: int = None):
+        payload = {
+            'position': position
+        }
+        if column_id is not None:
+            payload['column_id'] = column_id
+        response = cls._call('/projects/columns/cards/{card_id}/moves'.format(card_id=card_id), payload=payload, method='POST')
+        return response
+
+    def move(self, position: int, column_id: int = None):
+        return self.move_by_id(self.id, position, column_id)
+
 
 @attr.s
 class ProjectColumn(GitHubBase):
@@ -635,6 +813,35 @@ class ProjectColumn(GitHubBase):
     project_url = attr.ib(type=str)
     updated_at = attr.ib(type=datetime)
     url = attr.ib(type=str)
+
+    @classmethod
+    def delete_by_id(cls, column_id: int):
+        response = cls._call('/projects/columns/{column_id}'.format(column_id=column_id), method='DELETE')
+        return cls.from_response(result)
+
+    def delete(self):
+        return self.delete_by_id(self.id)
+
+    @classmethod
+    def move_by_id(cls, column_id: int, position: int):
+        response = cls._call('/projects/columns/{column_id}/moves'.format(column_id=column_id), payload={'position': position}, method='POST')
+        return cls.from_response(result)
+
+    def move(self, position: int):
+        return self.move_by_id(self, id, position)
+
+
+@attr.s
+class Project(GitHubBase):
+
+    @classmethod
+    def delete_by_id(cls, project_id: int):
+        response = cls._call('/projects/{project_id}'.format(project_id=project_id), method='DELETE')
+        return response
+
+    def delete(self):
+        return self.delete_by_id(self.id)
+
 
 
 @attr.s
@@ -736,6 +943,16 @@ class CommentReaction(GitHubBase):
     id = attr.ib(type=int)
     user = attr.ib(type=User)
 
+    @classmethod
+    def delete_by_id(cls, id: int):
+        response = cls._call('/reactions/{id}'.format(id=id), method='DELETE')
+        return cls.from_response(result)
+
+    @classmethod
+    def delete(self):
+        return self.delete_by_id(self.id)
+
+
 
 @attr.s
 class TopicsListing(GitHubBase):
@@ -790,7 +1007,7 @@ class Content(GitHubBase):
     _SCHEMA: typing.ClassVar[Schema] = schemas.CONTENT_SCHEMA
 
     commit = attr.ib(type=Commit)
-    content = attr.ib(type=typing.Union[ContentEntry, None])
+    content = attr.ib(type=ContentEntry)
 
 
 @attr.s
@@ -895,10 +1112,10 @@ class GpgKey(GitHubBase):
     can_sign = attr.ib(type=bool)
     created_at = attr.ib(type=datetime)
     emails = attr.ib(type=typing.List[dict])
-    expires_at = attr.ib(type=typing.Union[datetime, None])
+    expires_at = attr.ib(type=datetime)
     id = attr.ib(type=int)
     key_id = attr.ib(type=str)
-    primary_key_id = attr.ib(type=typing.Union[str, None])
+    primary_key_id = attr.ib(type=str)
     public_key = attr.ib(type=str)
     subkeys = attr.ib(type=typing.List['GpgKey'])
 
@@ -926,8 +1143,8 @@ class Issue(GitHubBase):
 
     assignees = attr.ib(type=typing.List[User])
     author_association = attr.ib(type=enums.AuthorAssociation)
-    body = attr.ib(type=typing.Union[str, None])
-    closed_at = attr.ib(type=typing.Union[datetime, None])
+    body = attr.ib(type=str)
+    closed_at = attr.ib(type=datetime)
     comments = attr.ib(type=int)
     comments_url = attr.ib(type=str)
     created_at = attr.ib(type=datetime)
@@ -950,3 +1167,61 @@ class Issue(GitHubBase):
     closed_by = attr.ib(type=User, default=None)
     pull_request = attr.ib(type=dict, default=None)
     repository = attr.ib(type=Repository, default=None)
+
+class Team(GitHubBase):
+    # TODO: add schema
+    # https://developer.github.com/v3/orgs/teams/#create-team
+
+    name = attr.ib(type=str)
+
+    id = attr.ib(type=int, default=None)
+    url = attr.ib(type=str, default=None)
+    slug = attr.ib(type=str, default=None)
+    description = attr.ib(type=str, default=None)
+    privacy = attr.ib(type=TeamPrivacy, default=None)
+    permission = attr.ib(type=TeamPermission, default=None)
+    members_url = attr.ib(type=str, default=None)
+    repositories_url = attr.ib(type=url, default=None)
+
+    members_count = attr.ib(type=int, default=None)
+    repos_count = attr.ib(type=int, default=None)
+    created_at = attr.ib(type=str, default=None)
+    updated_at = attr.ib(type=str, default=None)
+    organization = attr.ib(type=Organization, default=None)
+    parent = attr.ib(type=Team, default=None)
+
+    @classmethod
+    def create_in_organization(cls, org: str, team: Team):
+        """"To create a team, the authenticated user must be a member of org."""
+        response = cls._call('/orgs/{org}/teams'.format(org=org), method='POST')
+        return cls.from_response(result)
+
+
+@attr.s
+class Markdown(GitHubBase):
+    def __init__(self):
+        raise NotImplementedError
+
+    @classmethod
+    def render(cls):
+        response = cls._call('/markdown', method='POST')
+        return response
+
+    @classmethod
+    def render_raw(cls):
+        response = cls._call('/markdown/raw', method='POST')
+        return response
+
+
+@attr.s
+class RateLimit(GitHubBase):
+    # TODO: attributes?
+
+    @classmethod
+    def get(cls):
+        """"Note: Accessing this endpoint does not count against your rate limit."""
+        response = cls._call('/rate_limit', method='GET')
+        return response
+
+
+
