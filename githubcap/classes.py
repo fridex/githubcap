@@ -9,6 +9,7 @@ import githubcap.enums as enums
 import githubcap.schemas as schemas
 
 
+@attr.s
 class User(GitHubBase):
     """TODO: add a description"""
 
@@ -47,6 +48,8 @@ class User(GitHubBase):
     updated_at = attr.ib(type=datetime, default=None)
 
 
+
+@attr.s
 class RepositoryPermissions(GitHubBase):
     """TODO: add a description"""
 
@@ -57,6 +60,8 @@ class RepositoryPermissions(GitHubBase):
     push = attr.ib(type=bool)
 
 
+
+@attr.s
 class Organization(GitHubBase):
     """TODO: add a description"""
 
@@ -75,6 +80,8 @@ class Organization(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class License(GitHubBase):
     """TODO: add a description"""
 
@@ -86,6 +93,8 @@ class License(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class Repository(GitHubBase):
     """TODO: add a description"""
 
@@ -172,6 +181,8 @@ class Repository(GitHubBase):
     topics = attr.ib(type=typing.List[str], default=None)
 
 
+
+@attr.s
 class App(GitHubBase):
     """TODO: add a description"""
 
@@ -182,6 +193,8 @@ class App(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class Authorization(GitHubBase):
     """TODO: add a description"""
 
@@ -201,6 +214,8 @@ class Authorization(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class AuthorizationInfo(GitHubBase):
     """TODO: add a description"""
 
@@ -221,6 +236,8 @@ class AuthorizationInfo(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class ThreadSubscription(GitHubBase):
     """TODO: add a description"""
 
@@ -234,6 +251,8 @@ class ThreadSubscription(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class GistFork(GitHubBase):
     """TODO: add a description"""
 
@@ -246,6 +265,8 @@ class GistFork(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class GistHistory(GitHubBase):
     """TODO: add a description"""
 
@@ -258,6 +279,8 @@ class GistHistory(GitHubBase):
     version = attr.ib(type=str)
 
 
+
+@attr.s
 class Gist(GitHubBase):
     """TODO: add a description"""
 
@@ -284,6 +307,8 @@ class Gist(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class GistComment(GitHubBase):
     """TODO: add a description"""
 
@@ -297,6 +322,8 @@ class GistComment(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class CommitRef(GitHubBase):
     """TODO: add a description"""
 
@@ -306,6 +333,8 @@ class CommitRef(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class CommitPersonInfo(GitHubBase):
     """TODO: add a description"""
 
@@ -316,6 +345,8 @@ class CommitPersonInfo(GitHubBase):
     name = attr.ib(type=str)
 
 
+
+@attr.s
 class Commit(GitHubBase):
     """TODO: add a description"""
 
@@ -331,6 +362,8 @@ class Commit(GitHubBase):
     verification = attr.ib(type=dict)
 
 
+
+@attr.s
 class GitObject(GitHubBase):
     """TODO: add a description"""
 
@@ -341,6 +374,8 @@ class GitObject(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class GitRef(GitHubBase):
     """TODO: add a description"""
 
@@ -351,6 +386,8 @@ class GitRef(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class GitVerification(GitHubBase):
     """TODO: add a description"""
 
@@ -362,6 +399,8 @@ class GitVerification(GitHubBase):
     verified = attr.ib(type=bool)
 
 
+
+@attr.s
 class GitTag(GitHubBase):
     """TODO: add a description"""
 
@@ -376,6 +415,8 @@ class GitTag(GitHubBase):
     verification = attr.ib(type=GitVerification)
 
 
+
+@attr.s
 class GitTreeStructure(GitHubBase):
     """TODO: add a description"""
 
@@ -390,6 +431,8 @@ class GitTreeStructure(GitHubBase):
     url = attr.ib(type=str, default=None)
 
 
+
+@attr.s
 class GitTree(GitHubBase):
     """TODO: add a description"""
 
@@ -401,6 +444,8 @@ class GitTree(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class GithubApp(GitHubBase):
     """TODO: add a description"""
 
@@ -416,6 +461,8 @@ class GithubApp(GitHubBase):
     updated_at = attr.ib(type=datetime)
 
 
+
+@attr.s
 class RepositoriesListing(GitHubBase):
     """TODO: add a description"""
 
@@ -425,6 +472,8 @@ class RepositoriesListing(GitHubBase):
     total_count = attr.ib(type=int)
 
 
+
+@attr.s
 class IssueComment(GitHubBase):
     """TODO: add a description"""
 
@@ -439,6 +488,8 @@ class IssueComment(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class Label(GitHubBase):
     """TODO: add a description"""
 
@@ -451,6 +502,8 @@ class Label(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class Milestone(GitHubBase):
     """TODO: add a description"""
 
@@ -473,6 +526,8 @@ class Milestone(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class Migration(GitHubBase):
     """TODO: add a description"""
 
@@ -489,6 +544,8 @@ class Migration(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class SourceImport(GitHubBase):
     """TODO: add a description"""
 
@@ -511,6 +568,8 @@ class SourceImport(GitHubBase):
     vcs_url = attr.ib(type=str)
 
 
+
+@attr.s
 class CodeOfConduct(GitHubBase):
     """TODO: add a description"""
 
@@ -522,6 +581,8 @@ class CodeOfConduct(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class OrganizationMembership(GitHubBase):
     """TODO: add a description"""
 
@@ -535,6 +596,8 @@ class OrganizationMembership(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class ErrorReport(GitHubBase):
     """TODO: add a description"""
 
@@ -545,6 +608,8 @@ class ErrorReport(GitHubBase):
     documentation_url = attr.ib(type=str, default=None)
 
 
+
+@attr.s
 class ErrorTeam(GitHubBase):
     """TODO: add a description"""
 
@@ -554,6 +619,8 @@ class ErrorTeam(GitHubBase):
     message = attr.ib(type=str)
 
 
+
+@attr.s
 class Hook(GitHubBase):
     """TODO: add a description"""
 
@@ -572,6 +639,8 @@ class Hook(GitHubBase):
     test_url = attr.ib(type=str, default=None)
 
 
+
+@attr.s
 class ProjectCard(GitHubBase):
     """TODO: add a description"""
 
@@ -587,6 +656,8 @@ class ProjectCard(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class ProjectColumn(GitHubBase):
     """TODO: add a description"""
 
@@ -601,6 +672,8 @@ class ProjectColumn(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class Branch(GitHubBase):
     """TODO: add a description"""
 
@@ -613,6 +686,8 @@ class Branch(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class PullRequest(GitHubBase):
     """TODO: add a description"""
 
@@ -646,6 +721,8 @@ class PullRequest(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class Review(GitHubBase):
     """TODO: add a description"""
 
@@ -661,6 +738,8 @@ class Review(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class PullRequestComment(GitHubBase):
     """TODO: add a description"""
 
@@ -685,6 +764,8 @@ class PullRequestComment(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class CommentReaction(GitHubBase):
     """TODO: add a description"""
 
@@ -696,6 +777,8 @@ class CommentReaction(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class TopicsListing(GitHubBase):
     """TODO: add a description"""
 
@@ -704,6 +787,8 @@ class TopicsListing(GitHubBase):
     names = attr.ib(type=typing.List[str])
 
 
+
+@attr.s
 class CommitComment(GitHubBase):
     """TODO: add a description"""
 
@@ -722,6 +807,8 @@ class CommitComment(GitHubBase):
     user = attr.ib(type=User)
 
 
+
+@attr.s
 class ContentEntry(GitHubBase):
     """TODO: add a description"""
 
@@ -739,6 +826,8 @@ class ContentEntry(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class Content(GitHubBase):
     """TODO: add a description"""
 
@@ -748,6 +837,8 @@ class Content(GitHubBase):
     content = attr.ib(type=typing.Union[ContentEntry, None])
 
 
+
+@attr.s
 class Key(GitHubBase):
     """TODO: add a description"""
 
@@ -762,6 +853,8 @@ class Key(GitHubBase):
     verified = attr.ib(type=bool)
 
 
+
+@attr.s
 class Invitation(GitHubBase):
     """TODO: add a description"""
 
@@ -777,6 +870,8 @@ class Invitation(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class ReleaseAsset(GitHubBase):
     """TODO: add a description"""
 
@@ -795,6 +890,8 @@ class ReleaseAsset(GitHubBase):
     url = attr.ib(type=str)
 
 
+
+@attr.s
 class Release(GitHubBase):
     """TODO: add a description"""
 
@@ -827,6 +924,8 @@ class Release(GitHubBase):
     zipball_url = attr.ib(type=str)
 
 
+
+@attr.s
 class SearchResult(GitHubBase):
     """TODO: add a description"""
 
@@ -839,6 +938,8 @@ class SearchResult(GitHubBase):
     property = attr.ib(type=str)
 
 
+
+@attr.s
 class SearchResults(GitHubBase):
     """TODO: add a description"""
 
@@ -847,6 +948,8 @@ class SearchResults(GitHubBase):
     text_matches = attr.ib(type=typing.List['SearchResults'])
 
 
+
+@attr.s
 class GpgKey(GitHubBase):
     """TODO: add a description"""
 
@@ -866,6 +969,8 @@ class GpgKey(GitHubBase):
     subkeys = attr.ib(type=typing.List['GpgKey'])
 
 
+
+@attr.s
 class Issue(GitHubBase):
     """TODO: add a description"""
 
