@@ -1536,8 +1536,8 @@ class Issue(GitHubBase):
                                  assignee: str = None, creator: str = None,
                                  mentioned: str = None) -> typing.Generator[_IssueType, None, None]:
         """List issues for the given organization/owner and project."""
-        url = '/repos/{!s}/{!s}/issues'.format(organization, project)
         query_attrs = dict(locals())
+        url = '/repos/{!s}/{!s}/issues'.format(organization, project)
         query_attrs.pop('organization')
         query_attrs.pop('project')
         return cls._list_issues_any(url, query_attrs)
