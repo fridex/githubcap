@@ -4,11 +4,11 @@ import typing
 import attr
 from voluptuous import Schema
 
-from githubcap.base import GitHubBase
 import githubcap.enums as enums
 import githubcap.schemas as schemas
-from githubcap.exceptions import HTTPError
 
+from .base import GitHubBase
+from .exceptions import HTTPError
 
 # Break cyclic type dependencies where needed.
 _TeamType = typing.TypeVar('T', bound='Team')
@@ -1433,6 +1433,28 @@ class Issue(GitHubBase):
         """"Users with push access can unlock an issue's conversation."""
         cls._call('/repos/{owner}/{repo}/issues/{number}/lock'
                   .format(number=number, owner=owner, repo=repo), method='DELETE')
+
+    @classmethod
+    def by_number(cls, organization: str, project: str, number: int) -> _IssueType:
+        """Retrieve issue based on it's number."""
+        uri = '/repos/{org!s}/{project!s}/issues/{number:d}'.format(org=organization, project=project, number=number)
+        response, _ = cls._call(uri, method='GET')
+        return Issue.from_response(response)
+
+    def create(self, organization: str, project: str) -> _IssueType:
+        """Create an issue."""
+        uri = '/repos/{org!s}/{project!s}/issues'.format(org=organization, project=project)
+        payload = {key: value for key, value in attr.asdict(self).items() if value is not None}
+        response, _ = self._call(uri, payload=payload, method='POST')
+        return Issue.from_response(response)
+
+    def edit(self, organization: str, project: str, number: int) -> _IssueType:
+        """Edit existing issue."""
+        uri = '/repos/{org!s}/{project!s}/issues/{number:d}'.format(org=organization, project=project, number=number)
+        payload = {key: value for key, value in attr.asdict(self).items() if value is not None}
+        response, _ = self._call(uri, payload=payload, method='PATCH')
+        # TODO: report not-changed values
+        return Issue.from_response(response)
 
 
 class Team(GitHubBase):
