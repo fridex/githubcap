@@ -9,6 +9,7 @@ import githubcap.schemas as schemas
 
 from .base import GitHubBase
 from .exceptions import HTTPError
+from .utils import serialize_datetime
 
 # Break cyclic type dependencies where needed.
 _TeamType = typing.TypeVar('T', bound='Team')
@@ -60,7 +61,7 @@ class User(GitHubBase):
 
     @classmethod
     def remove_emails(cls, emails: typing.List[str]):
-        cls._call('/user/emails',payload=emails,  method='DELETE')
+        cls._call('/user/emails', payload=emails,  method='DELETE')
 
     @classmethod
     def get_public_emails(cls) -> typing.List[str]:
@@ -792,7 +793,6 @@ class Label(GitHubBase):
     url = attr.ib(type=str)
 
 
-
 @attr.s
 class Milestone(GitHubBase):
     """A milestone on GitHub."""
@@ -804,13 +804,13 @@ class Milestone(GitHubBase):
     created_at = attr.ib(type=datetime)
     creator = attr.ib(type=User)
     description = attr.ib(type=str)
-    due_on = attr.ib(type=str)
+    due_on = attr.ib(type=datetime)
     html_url = attr.ib(type=str)
     id = attr.ib(type=int)
     labels_url = attr.ib(type=str)
     number = attr.ib(type=int)
     open_issues = attr.ib(type=int)
-    state = attr.ib(type=str)
+    state = attr.ib(type=enums.MilestoneState)
     title = attr.ib(type=str)
     updated_at = attr.ib(type=datetime)
     url = attr.ib(type=str)
@@ -1374,10 +1374,23 @@ class Key(GitHubBase):
 
 
 @attr.s
+class IssuePullRequestInfo(GitHubBase):
+    """Representation of pull request details in case of issue is a pull request."""
+
+    _SCHEMA: typing.ClassVar[Schema] = schemas.ISSUE_PULL_REQUEST_INFO_SCHEMA
+
+    url = attr.ib(type=str)
+    html_url = attr.ib(type=str)
+    diff_url = attr.ib(type=str)
+    patch_url = attr.ib(type=str)
+
+
+@attr.s
 class Issue(GitHubBase):
     """An issue representation."""
 
     _SCHEMA: typing.ClassVar[Schema] = schemas.ISSUE_SCHEMA
+    ANY_USER: typing.ClassVar[str] = '*'
 
     assignees = attr.ib(type=typing.List[User])
     author_association = attr.ib(type=enums.AuthorAssociation)
@@ -1403,7 +1416,7 @@ class Issue(GitHubBase):
 
     assignee = attr.ib(type=User, default=None)
     closed_by = attr.ib(type=User, default=None)
-    pull_request = attr.ib(type=dict, default=None)
+    pull_request = attr.ib(type=IssuePullRequestInfo, default=None)
     repository = attr.ib(type=Repository, default=None)
 
     @classmethod
@@ -1439,7 +1452,7 @@ class Issue(GitHubBase):
         """Retrieve issue based on it's number."""
         uri = '/repos/{org!s}/{project!s}/issues/{number:d}'.format(org=organization, project=project, number=number)
         response, _ = cls._call(uri, method='GET')
-        return Issue.from_response(response)
+        return cls.from_response(response)
 
     def create(self, organization: str, project: str) -> _IssueType:
         """Create an issue."""
@@ -1455,6 +1468,79 @@ class Issue(GitHubBase):
         response, _ = self._call(uri, payload=payload, method='PATCH')
         # TODO: report not-changed values
         return Issue.from_response(response)
+
+    @classmethod
+    def _list_issues_any(cls, url: str, query_attrs: dict) -> typing.Generator[_IssueType, None, None]:
+        page = query_attrs.pop('page')
+        query_attrs.pop('cls')
+        query_string = ""
+        for key, value in query_attrs.items():
+            if key == 'since':
+                if value is None:
+                    continue
+
+                if isinstance(value, datetime):
+                    value = serialize_datetime(value)
+
+            if key in ('assignee', 'creator', 'mentioned') and value is None:
+                continue
+
+            if key == 'filter':
+                value = enums.Filtering.get_default()
+            elif key == 'state':
+                value = enums.IssueState.get_default()
+            elif key == 'sort':
+                value = enums.Sorting.get_default()
+            elif key == 'direction':
+                value = enums.SortingDirection.get_default()
+            elif key == 'labels':
+                if not value:
+                    continue
+                value = ",".join(value)
+
+            if query_string:
+                query_string += '&'
+
+            query_string += '{!s}={!s}'.format(key, str(value) if value is not None else 'none')
+
+        for item, _ in cls._do_listing(url, query_string, page):
+            yield cls.from_response(item)
+
+    @classmethod
+    def list_assigned_issues(cls, page: int = 0, filter: enums.Filtering = None, state: enums.IssueState = None,
+                             labels: typing.List[Label] = None, sort: enums.Sorting = None,
+                             direction: enums.SortingDirection = None, since: typing.Union[datetime, str] = None,
+                             milestone: str = None, assignee: str = None, creator: str = None,
+                             mentioned: str = None) -> typing.Generator[_IssueType, None, None]:
+        """List all assigned issues for the given organization - if organization is None, all issues are listed."""
+        return cls._list_issues_any('/issues', locals())
+
+    @classmethod
+    def list_organization_issues(cls, organization: str, page: int = 0, filter: enums.Filtering = None,
+                                 state: enums.IssueState = None, labels: typing.List[Label] = None,
+                                 sort: enums.Sorting = None, direction: enums.SortingDirection = None,
+                                 since: typing.Union[datetime, str] = None, milestone: str = None,
+                                 assignee: str = None, creator: str = None,
+                                 mentioned: str = None) ->typing.Generator[_IssueType, None, None]:
+        """List issues for a organization."""
+        url = '/orgs/{!s}/issues'.format(organization)
+        query_attrs = dict(locals())
+        query_attrs.pop('organization')
+        return cls._list_issues_any(url, query_attrs)
+
+    @classmethod
+    def list_project_issues(cls, organization: str, project: str, page: int = 0, filter: enums.Filtering = None,
+                                 state: enums.IssueState = None, labels: typing.List[Label] = None,
+                                 sort: enums.Sorting = None, direction: enums.SortingDirection = None,
+                                 since: typing.Union[datetime, str] = None, milestone: str = None,
+                                 assignee: str = None, creator: str = None,
+                                 mentioned: str = None) -> typing.Generator[_IssueType, None, None]:
+        """List issues for the given organization/owner and project."""
+        url = '/repos/{!s}/{!s}/issues'.format(organization, project)
+        query_attrs = dict(locals())
+        query_attrs.pop('organization')
+        query_attrs.pop('project')
+        return cls._list_issues_any(url, query_attrs)
 
 
 class Team(GitHubBase):

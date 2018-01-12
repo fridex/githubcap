@@ -78,6 +78,7 @@ class ReactionType(GitHubCapEnum):
 
     TBD = 'TBD'
 
+
 class Filtering(GitHubCapEnum):
     """Issue filtering."""
 

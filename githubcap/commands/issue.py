@@ -1,18 +1,14 @@
 """Implementation of CLI for issue manipulation."""
 
 from functools import partial
-import logging
 
 import click
 
-from githubcap.resources import IssueHandler
-from githubcap.resources import IssuesHandler
+import githubcap.enums as enums
+from githubcap.classes import Issue
 from githubcap.utils import command_choice_callback
-from githubcap.utils import get_attr_type
-from githubcap.utils import get_option_choices
 from githubcap.utils import print_command_result
-
-_ISSUES = IssuesHandler()
+from githubcap.exceptions import UserInputError
 
 
 @click.command('issues')
@@ -22,44 +18,46 @@ _ISSUES = IssuesHandler()
               help="GitHub owner - GitHub user name or organization name.")
 @click.option('--project', '-p', type=str, default=None, metavar='PROJECT_NAME',
               help="GitHub project name.")
-@click.option('--page', default=_ISSUES.page, show_default=True,
+@click.option('--page', default=0, show_default=True,
               help="Page in paginating to start with.")
-@click.option('--filter', '-f', default=_ISSUES.filter.name,
-              type=click.Choice(get_option_choices(IssuesHandler, 'filter')),
-              callback=partial(command_choice_callback, get_attr_type(IssuesHandler, 'filter')), show_default=True,
+@click.option('--filter', '-f', default=enums.Filtering.get_default().name,
+              type=click.Choice(enums.Filtering.all_names()),
+              callback=partial(command_choice_callback, enums.Filtering), show_default=True,
               help="Filter issues based on assigned state.")
-@click.option('--state', '-s', default=_ISSUES.state.name,
-              type=click.Choice(get_option_choices(IssuesHandler, 'state')),
-              callback=partial(command_choice_callback, get_attr_type(IssuesHandler, 'state')), show_default=True,
+@click.option('--state', '-s', default=enums.IssueState.get_default().name,
+              type=click.Choice(enums.IssueState.all_names()),
+              callback=partial(command_choice_callback, enums.IssueState), show_default=True,
               help="Filter issues based on issue state.")
-@click.option('--labels', default=_ISSUES.labels, type=str, show_default=True,
+@click.option('--labels', default=None, type=str, show_default=True,
               help="Filter issues based on labels - a comma separated list.")
-@click.option('--sort', default=_ISSUES.sort.name, type=click.Choice(get_option_choices(IssuesHandler, 'sort')),
-              callback=partial(command_choice_callback, get_attr_type(IssuesHandler, 'sort')), show_default=True,
+@click.option('--sort', default=enums.Sorting.get_default().name, type=click.Choice(enums.Sorting.all_names()),
+              callback=partial(command_choice_callback, enums.Sorting), show_default=True,
               help="Sorting criteria.")
-@click.option('--direction', default=_ISSUES.direction.name,
-              type=click.Choice(get_option_choices(IssuesHandler, 'direction')),
-              callback=partial(command_choice_callback, get_attr_type(IssuesHandler, 'direction')), show_default=True,
+@click.option('--direction', default=enums.SortingDirection.get_default().name,
+              type=click.Choice(enums.SortingDirection.all_names()),
+              callback=partial(command_choice_callback, enums.SortingDirection), show_default=True,
               help="Sorting direction.")
-@click.option('--since', default=_ISSUES.since, type=str, show_default=True,
+@click.option('--since', default=None, type=str, show_default=True,
               help="List issues updated at or after the given time.")
-@click.option('--milestone', '-m', default=_ISSUES.milestone, type=str, show_default=True,
+@click.option('--milestone', '-m', default=None, type=str, show_default=True,
               help="List issues with the given milestone.")
-@click.option('--assignee', '-a', default=_ISSUES.assignee, type=str, metavar="USER", show_default=True,
+@click.option('--assignee', '-a', default=None, type=str, metavar="USER",
               help="Filter issues based on assignee.")
-@click.option('--creator', '-c', default=_ISSUES.creator, type=str, metavar="USER", show_default=True,
+@click.option('--creator', '-c', default=None, type=str, metavar="USER",
               help="Filter issues based on creator.")
-@click.option('--mentioned', '-m', default=_ISSUES.mentioned, type=str, metavar="USER", show_default=True,
+@click.option('--mentioned', '-m', default=None, type=str, metavar="USER",
               help="Filter issues based on mentioned user.")
-def cli_issues(organization=None, project=None, no_pretty=False, **issues_attributes):
+def cli_issues(organization=None, project=None, no_pretty=False, **issues_query):
     """List GitHub issues."""
-    issues = IssuesHandler(**issues_attributes)
-
-    # TODO: split to two commands
-    if project is None:
-        reported_issues = issues.list_assigned_issues(organization)
+    if organization is None and project is None:
+        reported_issues = Issue.list_assigned_issues(**issues_query)
+    elif organization is not None and project is None:
+        reported_issues = Issue.list_organization_issues(organization, **issues_query)
+    elif organization is not None and project is not None:
+        reported_issues = Issue.list_project_issues(organization, project, **issues_query)
     else:
-        reported_issues = issues.list_issues(organization, project)
+        raise UserInputError("Organization has to be specified explicitly for project %r" % project)
+
     print_command_result(list(map(lambda x: x.to_dict(), reported_issues)), not no_pretty)
 
 
@@ -74,7 +72,7 @@ def cli_issues(organization=None, project=None, no_pretty=False, **issues_attrib
               help="Issue number (issue identifier).")
 def cli_issue(no_pretty=False, organization=None, project=None, number=None):
     """Retrieve a GitHub issue."""
-    issue = IssueHandler.by_number(organization, project, number)
+    issue = Issue.by_number(organization, project, number)
     print_command_result(issue.to_dict(), not no_pretty)
 
 
@@ -97,15 +95,16 @@ def cli_issue(no_pretty=False, organization=None, project=None, number=None):
               help="")
 @click.option('--assignees', '-a', type=str, metavar='USER1,USER2,..',
               help="")
-@click.option('--state', '-s', default=None, type=click.Choice(get_option_choices(IssuesHandler, 'state')),
-              callback=partial(command_choice_callback, get_attr_type(IssuesHandler, 'state')), show_default=True,
+@click.option('--state', '-s', default=None, type=click.Choice(enums.IssueState.all_names()),
+              callback=partial(command_choice_callback, enums.IssueState), show_default=True,
               help="Filter issues based on issue state.")
 def cli_issue_edit(no_pretty=False, organization=None, project=None, number=None, **issue_attributes):
     """Modify a GitHub issue."""
     if all(val is None for val in issue_attributes.values()):
-        raise ValueError("No attributes to edit")
+        raise UserInputError("No attributes to edit")
 
-    issue = IssueHandler(**issue_attributes).edit(organization, project, number)
+    # TODO: edit by number
+    issue = Issue.edit(organization, project, number, issue_attributes)
     print_command_result(issue.to_dict(), not no_pretty)
 
 
@@ -126,10 +125,11 @@ def cli_issue_edit(no_pretty=False, organization=None, project=None, number=None
               help="")
 @click.option('--assignees', '-a', type=str, metavar='USER1,USER2,..',
               help="")
-@click.option('--state', '-s', default=None, type=click.Choice(get_option_choices(IssuesHandler, 'state')),
-              callback=partial(command_choice_callback, get_attr_type(IssuesHandler, 'state')), show_default=True,
+@click.option('--state', '-s', default=None, type=click.Choice(enums.IssueState.all_names()),
+              callback=partial(command_choice_callback, enums.IssueState), show_default=True,
               help="Filter issues based on issue state.")
 def cli_issue_create(no_pretty=False, organization=None, project=None, **issue_attributes):
     """Create a GitHub issue."""
-    issue = IssueHandler(**issue_attributes).create(organization, project)
+    issue = Issue.from_dict(**issue_attributes)
+    issue = issue.create(organization, project)
     print_command_result(issue.to_dict(), not no_pretty)

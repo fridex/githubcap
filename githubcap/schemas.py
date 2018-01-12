@@ -768,3 +768,11 @@ TEAM_SCHEMA = Schema({
     Required("organization"): ORGANIZATION_SCHEMA,
     Required("parent"): Self
 })
+
+
+ISSUE_PULL_REQUEST_INFO_SCHEMA = Schema({
+    Required("url"): Url(),
+    Required("html_url"): Url(),
+    Required("diff_url"): Url(),
+    Required("patch_url"): Url()
+})

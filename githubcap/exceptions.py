@@ -30,3 +30,7 @@ class HTTPError(GithubcapException):
 
 class SchemaValidationError(GithubcapException):
     """Raised on schema validation failure."""
+
+
+class UserInputError(GithubcapException):
+    """Raised on wrong parameters supplied on user calls."""

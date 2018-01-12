@@ -101,11 +101,6 @@ def get_attr_type(class_: type, attr_name: str) -> type:
     return getattr(attr.fields(class_), attr_name).type
 
 
-def get_option_choices(class_: type, attr_name: str) -> typing.List[str]:
-    """Get all choices for an enum."""
-    return get_attr_type(class_, attr_name).all_names()
-
-
 def parse_cli_headers(text_headers: str) -> typing.Dict[str, str]:
     """Parse headers supplied from command line.
 

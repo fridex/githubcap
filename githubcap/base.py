@@ -121,7 +121,7 @@ class GitHubBase(object):
         return result
 
     @classmethod
-    def _call(cls, uri: str, payload: dict = None, method: str = None, json_response: bool = True):
+    def _call(cls, uri: str, payload: typing.Union[dict, list] = None, method: str = None, json_response: bool = True):
         """Perform a request to GitHub API v3.
 
         :param uri: API endpoint
@@ -181,23 +181,22 @@ class GitHubBase(object):
         """Construct query string added to URL."""
         raise NotImplementedError
 
-    def _do_listing(self, base_uri: str):
+    @classmethod
+    def _do_listing(cls, base_uri: str, query_string: str = None, page: int = 0, method: str = None):
         """Perform listing of entries returned from API endpoint - respect pagination if configured."""
         while True:
-            uri = '{!s}?{!s}'.format(base_uri, self._get_query_string())
-            response, headers = self._call(uri, method='GET')
+            uri = '{!s}?page={!s}&{!s}'.format(base_uri, page, query_string if query_string else "")
+            response, headers = cls._call(uri, method=method or 'GET')
 
             for entry in response:
-                yield entry
+                yield entry, headers
 
             if not Configuration().pagination:
                 return
 
-            next_page = next_pagination_page(headers)
-            if next_page is None:
+            page = next_pagination_page(headers)
+            if page is None:
                 return
-            # TODO: create a new class that has "page"
-            self.page = next_page
 
     @classmethod
     def submit(cls, item):
