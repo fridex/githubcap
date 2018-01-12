@@ -1503,13 +1503,12 @@ class Markdown(GitHubBase):
         raise NotImplementedError
 
     @classmethod
-    def render(cls):
-        response, _ = cls._call('/markdown', method='POST')
-        return response
-
-    @classmethod
-    def render_raw(cls):
-        response, _ = cls._call('/markdown/raw', method='POST')
+    def render(cls, text: str):
+        payload = {
+            'text': text,
+            'mode': 'markdown'
+        }
+        response, _ = cls._call('/markdown', payload=payload, method='POST', json_response=False)
         return response
 
 
