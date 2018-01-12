@@ -749,3 +749,22 @@ ISSUE_SCHEMA = Schema({
         Required("patch_url"): Url()
     }),
 })
+
+
+TEAM_SCHEMA = Schema({
+    Required("name"): str,
+    Required("id"): int,
+    Required("url"): Url(),
+    Required("slug"): str,
+    Required("description"): Schema(Any(str, None)),
+    Required("privacy"): Schema(Any(*enums.TeamPrivacy.all_values())),
+    Required("permission"): Schema(Any(enums.TeamPermission.all_values())),
+    Required("members_url"): Url(),
+    Required("repositories_url"): Url(),
+    Required("members_count"): int,
+    Required("repos_count"): int,
+    Required("created_at"): str,
+    Required("updated_at"): str,
+    Required("organization"): ORGANIZATION_SCHEMA,
+    Required("parent"): Self
+})

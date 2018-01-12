@@ -181,3 +181,25 @@ class UserType(GitHubCapEnum):
     def get_default(cls):
         """Get default enum value."""
         return cls.USER
+
+
+class TeamPrivacy(GitHubCapEnum):
+    """Possible team privacy values"""
+
+    TBD = 'TBD'
+
+    @classmethod
+    def get_default(cls):
+        """Get default enum value."""
+        return None
+
+
+class TeamPermission(GitHubCapEnum):
+    """Possible team permission values"""
+
+    TBD = 'TBD'
+
+    @classmethod
+    def get_default(cls):
+        """Get default enum value."""
+        return None
