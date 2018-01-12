@@ -29,98 +29,12 @@ _LOG = logging.getLogger(__name__)
 
 
 @attr.s
-class GitHubHandlerBase(object):
-    """A base class for handler implementation."""
-
-    DEFAULT_PER_PAGE: typing.ClassVar[int] = ConfigurationDefaults.PER_PAGE_LISTING
-
-    @classmethod
-    def _call(cls, uri: str, payload: dict = None, method: str = None):
-        """Perform a request to GitHub API v3.
-
-        :param uri: API endpoint
-        :param payload: data sent to GitHub API remote
-        :param method: a string representation of method that should be used
-        """
-        requests_kwargs = {
-            'headers': copy.copy(Configuration().headers)
-        }
-
-        if Configuration().token:
-            _LOG.debug("Using OAuth2 token '%s***' for GitHub call", Configuration().token[:4])
-            requests_kwargs['headers']['Authorization'] = 'token {!s}'.format(Configuration().token)
-        elif Configuration().user:
-            if not Configuration().password:
-                raise MissingPassword("No password set for user {!s}".format(Configuration().user))
-
-            _LOG.debug("Using basic authentication for user %s", Configuration().user)
-            requests_kwargs['auth'].append((Configuration().user, Configuration().password))
-        else:
-            _LOG.debug("No authentication is used")
-
-        url = "{!s}/{!s}".format(Configuration().github_api, uri)
-        requests_func = getattr(requests, method.lower())
-        if payload:
-            requests_kwargs['json'] = payload
-
-        while True:
-            _LOG.debug("%s %s", method, url)
-            response = requests_func(url, **requests_kwargs)
-
-            _LOG.debug("Request took %s and the HTTP status code for response was %d",
-                       response.elapsed, response.status_code)
-
-            if not (response.status_code == 403 and
-                    response.json()['message'].startswith("API rate limit exceeded") and
-                    Configuration().omit_rate_limiting):
-                break
-
-            reset_datetime = datetime.fromtimestamp(int(response.headers['X-RateLimit-Reset']))
-            sleep_time = (reset_datetime - datetime.now()).total_seconds()
-            _LOG.debug("API rate limit hit, retrying in %d seconds...", sleep_time)
-            time.sleep(sleep_time)
-
-        try:
-            # Rely on request's checks here
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as exc:
-            raise HTTPError(response.json(), response.status_code) from exc
-
-        return response.json(), response.headers
-
-    def _get_query_string(self):
-        """Construct query string added to URL."""
-        raise NotImplementedError
-
-    def _do_listing(self, base_uri: str):
-        """Perform listing of entries returned from API endpoint - respect pagination if configured."""
-        while True:
-            uri = '{!s}?{!s}'.format(base_uri, self._get_query_string())
-            response, headers = self._call(uri, method='GET')
-
-            for entry in response:
-                yield entry
-
-            if not Configuration().pagination:
-                return
-
-            next_page = next_pagination_page(headers)
-            if next_page is None:
-                return
-            # TODO: create a new class that has "page"
-            self.page = next_page
-
-    @classmethod
-    def submit(cls, item):
-        """Submit an item to remote."""
-        raise NotImplementedError
-
-
-@attr.s
 class GitHubBase(object):
     """Base class for resources provided by GitHub API v3."""
 
     _SCHEMA: typing.ClassVar[Schema] = None
+
+    DEFAULT_PER_PAGE: typing.ClassVar[int] = ConfigurationDefaults.PER_PAGE_LISTING
 
     # TODO: dirty flag
 
@@ -205,3 +119,88 @@ class GitHubBase(object):
         for attribute in self.__attrs_attrs__:  # pylint: disable=no-member
             result[attribute.name] = self._to_dict_value(getattr(self, attribute.name))
         return result
+
+    @classmethod
+    def _call(cls, uri: str, payload: dict = None, method: str = None, json_response: bool = True):
+        """Perform a request to GitHub API v3.
+
+        :param uri: API endpoint
+        :param payload: data sent to GitHub API remote
+        :param method: a string representation of method that should be used
+        :param json_response: False for a raw response, no JSON is parsed
+        """
+        requests_kwargs = {
+            'headers': copy.copy(Configuration().headers)
+        }
+
+        if Configuration().token:
+            _LOG.debug("Using OAuth2 token '%s***' for GitHub call", Configuration().token[:4])
+            requests_kwargs['headers']['Authorization'] = 'token {!s}'.format(Configuration().token)
+        elif Configuration().user:
+            if not Configuration().password:
+                raise MissingPassword("No password set for user {!s}".format(Configuration().user))
+
+            _LOG.debug("Using basic authentication for user %s", Configuration().user)
+            requests_kwargs['auth'].append((Configuration().user, Configuration().password))
+        else:
+            _LOG.debug("No authentication is used")
+
+        url = "{!s}{!s}".format(Configuration().github_api, uri)
+        requests_func = getattr(requests, method.lower())
+        if payload:
+            requests_kwargs['json'] = payload
+
+        while True:
+            _LOG.debug("%s %s", method, url)
+            response = requests_func(url, **requests_kwargs)
+
+            _LOG.debug("Request took %s and the HTTP status code for response was %d",
+                       response.elapsed, response.status_code)
+
+            if not (response.status_code == 403 and
+                    response.json()['message'].startswith("API rate limit exceeded") and
+                    Configuration().omit_rate_limiting):
+                break
+
+            reset_datetime = datetime.fromtimestamp(int(response.headers['X-RateLimit-Reset']))
+            sleep_time = (reset_datetime - datetime.now()).total_seconds()
+            _LOG.debug("API rate limit hit, retrying in %d seconds...", sleep_time)
+            time.sleep(sleep_time)
+
+        try:
+            # Rely on request's checks here
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as exc:
+            raise HTTPError(response.json(), response.status_code) from exc
+
+        if json_response:
+            return response.json(), response.headers
+        return response.text, response.headers
+
+    def _get_query_string(self):
+        """Construct query string added to URL."""
+        raise NotImplementedError
+
+    def _do_listing(self, base_uri: str):
+        """Perform listing of entries returned from API endpoint - respect pagination if configured."""
+        while True:
+            uri = '{!s}?{!s}'.format(base_uri, self._get_query_string())
+            response, headers = self._call(uri, method='GET')
+
+            for entry in response:
+                yield entry
+
+            if not Configuration().pagination:
+                return
+
+            next_page = next_pagination_page(headers)
+            if next_page is None:
+                return
+            # TODO: create a new class that has "page"
+            self.page = next_page
+
+    @classmethod
+    def submit(cls, item):
+        """Submit an item to remote."""
+        raise NotImplementedError
+
