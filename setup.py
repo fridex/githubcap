@@ -35,7 +35,7 @@ setup(
     entry_points={
         'console_scripts': ['githubcap-cli=githubcap.cli:cli']
     },
-    packages=find_packages(),
+    packages=find_packages(exclude=['test', 'test.*']),
     install_requires=get_requirements(),
     author='Fridolin Pokorny',
     author_email='fridolin.pokorny@gmail.com',
